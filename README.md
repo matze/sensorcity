@@ -1,8 +1,6 @@
 # Karlsruhe SensorCity
 
-# 👉 [**Open the live dashboard**](https://matze.github.io/sensorcity/) 🌡️
-
-### → https://matze.github.io/sensorcity/
+👉 **[Open the live dashboard](https://matze.github.io/sensorcity/)** 🌡️
 
 Fast, minimal dashboard for the City of Karlsruhe's public weather-sensor
 network. Shows current temperature, humidity, pressure and solar radiation for a
