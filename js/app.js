@@ -246,6 +246,12 @@ function init() {
         dom.heatmapToggle.checked ? heatOverlay.enable() : heatOverlay.disable();
     });
 
+    // Browsers restore the checkbox state across reloads without firing `change`,
+    // so honor a restored "checked" by enabling the overlay explicitly.
+    if (dom.heatmapToggle.checked) {
+        heatOverlay.enable();
+    }
+
     dom.rangeControls.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-days]");
 
