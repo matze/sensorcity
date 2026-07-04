@@ -456,9 +456,7 @@ a:hover {
         font-size: 3.4rem;
     }
 
-    /* Push the unit to the right edge so the number spans the row, not floats. */
     .hero-unit {
-        margin-left: auto;
         padding-bottom: 0;
     }
 
