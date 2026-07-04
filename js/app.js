@@ -111,15 +111,17 @@ function renderDetail(sensor) {
                 ${stale ? '<span class="stale-badge">veraltet · </span>' : ""}gemessen vor ${minutesAgo(sensor)} min
             </span>
         </div>
-        <div class="hero">
-            <span class="hero-dot" style="background:${color}"></span>
-            <span class="hero-value">${sensor.temp.toFixed(1)}</span>
-            <span class="hero-unit">°C</span>
-        </div>
-        <div class="metric-grid">
-            ${metric("Luftfeuchtigkeit", sensor.humidity, "%")}
-            ${metric("Luftdruck", sensor.pressure, "hPa", 0)}
-            ${metric("Sonneneinstrahlung", sensor.radiation, "W/m²", 0)}
+        <div class="detail-body">
+            <div class="hero">
+                <span class="hero-dot" style="background:${color}"></span>
+                <span class="hero-value">${sensor.temp.toFixed(1)}</span>
+                <span class="hero-unit">°C</span>
+            </div>
+            <div class="metric-grid">
+                ${metric("Luftfeuchtigkeit", sensor.humidity, "%")}
+                ${metric("Luftdruck", sensor.pressure, "hPa", 0)}
+                ${metric("Sonneneinstrahlung", sensor.radiation, "W/m²", 0)}
+            </div>
         </div>`;
 }
 
@@ -193,9 +195,8 @@ async function loadSensors() {
     sensorMap.setSensors(sensors, state.tempMin, state.tempMax);
     heatOverlay.setData(sensors, state.tempMin, state.tempMax);
 
-    dom.updateStatus.textContent = `Aktualisiert ${new Intl.DateTimeFormat("de-DE", {
-        hour: "2-digit", minute: "2-digit",
-    }).format(new Date())}`;
+    const time = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(new Date());
+    dom.updateStatus.innerHTML = `<span class="update-word">Aktualisiert </span>${time}`;
 }
 
 async function refresh({ initial = false } = {}) {

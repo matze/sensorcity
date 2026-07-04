@@ -330,11 +330,26 @@ a:hover {
     font-weight: 600;
 }
 
+.detail-body {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem 2rem;
+    margin-top: 1.1rem;
+}
+
+.detail-body .hero {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.detail-body .metric-grid {
+    flex: 1 1 auto;
+}
+
 .hero {
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
-    margin: 0.8rem 0 1.1rem;
 }
 
 .hero-value {
@@ -390,12 +405,27 @@ a:hover {
 }
 
 @media (max-width: 860px) {
+    .app-header {
+        padding: 0.8rem 1rem;
+    }
+
     .app-header h1 {
         font-size: 1.1rem;
     }
 
+    .update-word {
+        display: none;
+    }
+
     .detail-panel {
         padding: 1rem;
+    }
+
+    .detail-body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.9rem;
+        margin-top: 0.7rem;
     }
 
     .hero {
@@ -477,7 +507,6 @@ a:hover {
 
 .chart {
     padding: 0.6rem 0.4rem 0.2rem;
-    min-height: 260px;
     position: relative;
 }
 
