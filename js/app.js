@@ -219,6 +219,8 @@ async function refresh({ initial = false } = {}) {
             }
         }
     } catch (error) {
+        console.error("refresh failed", error);
+
         if (initial) {
             dom.detail.innerHTML = `<p class="error">Daten konnten nicht geladen werden: ${error.message}</p>`;
             dom.list.innerHTML = `<li class="list-empty">Fehler beim Laden.</li>`;

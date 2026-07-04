@@ -30,7 +30,7 @@ export class SensorMap {
     }
 
     setSensors(sensors, min, max) {
-        this.markers.forEach((marker) => marker.remove());
+        this.markers.forEach((entry) => entry.marker.remove());
         this.markers.clear();
 
         const located = sensors.filter((s) => s.lat != null && s.lon != null);

@@ -8,7 +8,9 @@ const HISTORY_URL = `${SERVICE}/2/query`;
 export const STALE_AFTER_MS = 60 * 60 * 1000;
 
 async function fetchJson(url, params) {
-    const response = await fetch(`${url}?${new URLSearchParams(params)}`);
+    // `no-store` skips conditional revalidation, which otherwise makes a manual
+    // refresh come back as 304 Not Modified and always fetches the live reading.
+    const response = await fetch(`${url}?${new URLSearchParams(params)}`, { cache: "no-store" });
 
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
