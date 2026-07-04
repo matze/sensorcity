@@ -41,7 +41,7 @@ export class Chart {
 
     showLoading() {
         this.container.innerHTML =
-            '<div class="chart-loading"><span class="spinner"></span> Lade Verlauf …</div>';
+            '<div class="chart-loading"><span class="loader"><i></i><i></i><i></i></span> Lade Verlauf …</div>';
     }
 
     showMessage(text) {
