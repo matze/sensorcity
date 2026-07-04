@@ -200,7 +200,7 @@ async function loadSensors() {
 }
 
 async function refresh({ initial = false } = {}) {
-    dom.refresh.classList.add("spinning");
+    dom.refresh.classList.add("busy");
 
     try {
         await loadSensors();
@@ -229,7 +229,7 @@ async function refresh({ initial = false } = {}) {
         dom.updateStatus.textContent = "Aktualisierung fehlgeschlagen";
     } finally {
         state.lastRefresh = Date.now();
-        dom.refresh.classList.remove("spinning");
+        dom.refresh.classList.remove("busy");
     }
 }
 
