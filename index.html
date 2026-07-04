@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karlsruhe SensorCity</title>
+    <meta name="description" content="Aktuelle Wetterdaten aus dem Sensornetz der Stadt Karlsruhe – schnell und übersichtlich.">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌡️</text></svg>">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Karlsruhe <span class="accent">SensorCity</span></h1>
+        <div class="header-status">
+            <span id="updateStatus" class="update-status" aria-live="polite"></span>
+            <button id="refreshButton" class="icon-button" type="button" title="Aktualisieren" aria-label="Aktualisieren">↻</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <aside class="sidebar" aria-label="Sensorauswahl">
+            <div class="search-row">
+                <input id="sensorSearch" type="search" placeholder="Standort suchen …" autocomplete="off" spellcheck="false">
+            </div>
+            <ol id="sensorList" class="sensor-list" aria-label="Sensoren, alphabetisch sortiert">
+                <li class="list-placeholder">
+                    <span class="spinner"></span> Lade Sensoren …
+                </li>
+            </ol>
+        </aside>
+
+        <section class="content">
+            <div id="detail" class="detail-panel">
+                <div class="detail-placeholder">
+                    <span class="spinner spinner-lg"></span>
+                </div>
+            </div>
+
+            <div class="panel map-panel">
+                <div class="panel-head">
+                    <h2>Karte</h2>
+                    <label class="toggle">
+                        <input id="heatmapToggle" type="checkbox">
+                        <span>Wärmekarte</span>
+                    </label>
+                </div>
+                <div id="map" class="map" role="application" aria-label="Sensorkarte"></div>
+            </div>
+
+            <div class="panel chart-panel">
+                <div class="panel-head">
+                    <h2>Temperaturverlauf</h2>
+                    <div id="rangeControls" class="range-controls" role="group" aria-label="Zeitraum">
+                        <button type="button" data-days="1">24 h</button>
+                        <button type="button" data-days="7" class="active">7 Tage</button>
+                        <button type="button" data-days="30">30 Tage</button>
+                    </div>
+                </div>
+                <div id="chart" class="chart"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <span>Datenquelle: Stadt Karlsruhe</span>
+        <span>·</span>
+        <a href="https://geoportal.karlsruhe.de/sensorcity/Dashboard/?page=Seite&amp;views=Temperatur">Offizielles Portal</a>
+    </footer>
+
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
