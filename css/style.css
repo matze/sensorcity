@@ -144,6 +144,7 @@ a:hover {
 .sidebar {
     position: sticky;
     top: 1.1rem;
+    min-width: 0; /* let the grid track shrink instead of stretching to the longest sensor name */
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
@@ -223,6 +224,7 @@ a:hover {
 
 .sensor-name {
     flex: 1 1 auto;
+    min-width: 0; /* let the flex item shrink so ellipsis works and the row never forces page width */
     font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;

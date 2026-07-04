@@ -89,7 +89,11 @@ function updateListSelection() {
     const active = dom.list.querySelector(".sensor-item.active");
 
     if (active) {
-        active.scrollIntoView({ block: "nearest" });
+        // Scroll only the list container, never the window — otherwise selecting
+        // on load drags the viewport down to the list (bottom of the page on mobile).
+        const list = dom.list;
+        const delta = active.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        list.scrollTop += delta - (list.clientHeight - active.clientHeight) / 2;
     }
 }
 
