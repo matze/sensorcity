@@ -7,10 +7,6 @@ network. Shows current temperature, humidity, pressure and solar radiation for a
 chosen sensor, with a sortable list, a map, a temperature history chart and a
 computed heat map.
 
-A single static page — no framework, no build step. The only vendored
-dependency is [Leaflet](https://leafletjs.com/) (in `vendor/`); map tiles come
-from OpenStreetMap.
-
 ## Data source
 
 Karlsruhe's public ArcGIS FeatureServer
@@ -26,12 +22,6 @@ Any static file server works; ES modules require `http://`, not `file://`:
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
-
-## Deploy
-
-Pushing to `main` publishes via GitHub Actions (`.github/workflows/deploy.yml`).
-In the repo settings enable **Pages → Build and deployment → Source: GitHub
-Actions** once.
 
 ## Structure
 
