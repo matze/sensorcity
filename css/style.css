@@ -551,6 +551,35 @@ a:hover {
     stroke-width: 1;
 }
 
+.chart .comfort-line {
+    stroke: var(--axis);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+    opacity: 0.6;
+}
+
+/* The chart SVG scales with the viewBox, so its text shrinks on narrow
+   screens; enlarge the user-unit font sizes to keep it legible. */
+@media (max-width: 860px) {
+    .chart .axis-label {
+        font-size: 15px;
+    }
+
+    .chart .comfort-label {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 520px) {
+    .chart .axis-label {
+        font-size: 20px;
+    }
+
+    .chart .comfort-label {
+        font-size: 17px;
+    }
+}
+
 .chart .grid-line {
     stroke: var(--gridline);
     stroke-width: 1;
