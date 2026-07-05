@@ -285,16 +285,28 @@ function metricKeyFor(field) {
     return Object.keys(METRICS).find((key) => METRICS[key].field === field);
 }
 
-// The temperature change against ~24 h ago, shown next to the hero value.
+// The temperature change against the reading from the same time the day before,
+// shown next to the hero value. Skipped when no reading falls near that hour.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TREND_TOLERANCE_MS = 3 * 60 * 60 * 1000;
+
 async function loadTrend(sensor) {
     try {
-        const points = await fetchHistory({ deviceId: sensor.deviceId, days: 1, field: "temp" });
+        const points = await fetchHistory({ deviceId: sensor.deviceId, days: 2, field: "temp" });
 
         if (state.selectedKey !== sensor.key || points.length === 0) {
             return;
         }
 
-        state.trend = Math.round((sensor.temp - points[0].value) * 10) / 10;
+        const target = sensor.measuredAt - DAY_MS;
+        const past = points.reduce((best, point) =>
+            Math.abs(point.time - target) < Math.abs(best.time - target) ? point : best);
+
+        if (Math.abs(past.time - target) > TREND_TOLERANCE_MS) {
+            return;
+        }
+
+        state.trend = Math.round((sensor.temp - past.value) * 10) / 10;
         renderDetail(sensor);
     } catch {
         /* the trend badge is optional; leave it off on failure */
