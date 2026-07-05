@@ -540,6 +540,12 @@ a:hover {
     font-variant-numeric: tabular-nums;
 }
 
+.chart .comfort-label {
+    fill: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+}
+
 .chart .grid-line {
     stroke: var(--gridline);
     stroke-width: 1;

@@ -13,6 +13,15 @@ import { interpolate, FRACTIONS, rgbString, gradientCss } from "./color.js";
 
 // Absolute anchors placing the neutral pivot at ~21 °C (thermal comfort).
 const COMFORT_TEMPS = [-5, 7, 21, 28, 38];
+
+// Qualitative comfort reference points (°C) for labelling the history y-axis.
+export const COMFORT_MARKS = [
+    { temp: -5, label: "eisig" },
+    { temp: 7, label: "kühl" },
+    { temp: 21, label: "behaglich" },
+    { temp: 28, label: "warm" },
+    { temp: 38, label: "heiß" },
+];
 const COMFORT_MIN = COMFORT_TEMPS[0];
 const COMFORT_MAX = COMFORT_TEMPS[COMFORT_TEMPS.length - 1];
 

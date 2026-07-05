@@ -1,10 +1,13 @@
 // Hand-rolled SVG line chart for a single temperature series, with a hover
 // crosshair and tooltip. No chart library.
 
+import { COMFORT_MARKS } from "./scale.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const VIEW_W = 720;
 const VIEW_H = 300;
-const MARGIN = { top: 16, right: 18, bottom: 28, left: 40 };
+// The right gutter holds the comfort labels ("behaglich", "warm", …).
+const MARGIN = { top: 16, right: 66, bottom: 28, left: 40 };
 const PLOT_W = VIEW_W - MARGIN.left - MARGIN.right;
 const PLOT_H = VIEW_H - MARGIN.top - MARGIN.bottom;
 
@@ -77,6 +80,7 @@ export class Chart {
 
         this.drawYAxis(svg, vMin, vMax);
         this.drawXAxis(svg, spanDays);
+        this.drawComfortMarks(svg);
         this.drawLine(svg, points);
 
         this.crosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
@@ -126,6 +130,24 @@ export class Chart {
             const label = el("text", { class: "axis-label", x, y: baseY + 16, "text-anchor": "middle" });
             label.textContent = (useHours ? hourFmt : dayFmt).format(new Date(time));
             svg.append(label);
+        }
+    }
+
+    // Comfort reference labels in the right gutter, at their absolute
+    // temperature, for those that fall within the visible range.
+    drawComfortMarks(svg) {
+        for (const { temp, label } of COMFORT_MARKS) {
+            if (temp < this.vMin || temp > this.vMax) {
+                continue;
+            }
+
+            const node = el("text", {
+                class: "comfort-label",
+                x: MARGIN.left + PLOT_W + 8,
+                y: this.y(temp) + 3,
+            });
+            node.textContent = label;
+            svg.append(node);
         }
     }
 
