@@ -15,8 +15,6 @@ const dom = {
     list: document.getElementById("sensorList"),
     search: document.getElementById("sensorSearch"),
     detail: document.getElementById("detail"),
-    updateStatus: document.getElementById("updateStatus"),
-    refresh: document.getElementById("refreshButton"),
     heatmapToggle: document.getElementById("heatmapToggle"),
     rangeControls: document.getElementById("rangeControls"),
 };
@@ -194,14 +192,9 @@ async function loadSensors() {
     renderList(dom.search.value);
     sensorMap.setSensors(sensors, state.tempMin, state.tempMax);
     heatOverlay.setData(sensors, state.tempMin, state.tempMax);
-
-    const time = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(new Date());
-    dom.updateStatus.innerHTML = `<span class="update-word">Aktualisiert </span>${time}`;
 }
 
 async function refresh({ initial = false } = {}) {
-    dom.refresh.classList.add("busy");
-
     try {
         await loadSensors();
 
@@ -225,11 +218,8 @@ async function refresh({ initial = false } = {}) {
             dom.detail.innerHTML = `<p class="error">Daten konnten nicht geladen werden: ${error.message}</p>`;
             dom.list.innerHTML = `<li class="list-empty">Fehler beim Laden.</li>`;
         }
-
-        dom.updateStatus.textContent = "Aktualisierung fehlgeschlagen";
     } finally {
         state.lastRefresh = Date.now();
-        dom.refresh.classList.remove("busy");
     }
 }
 
@@ -241,8 +231,6 @@ function init() {
     sensorMap.onViewChange(() => heatOverlay.draw());
 
     dom.search.addEventListener("input", () => renderList(dom.search.value));
-
-    dom.refresh.addEventListener("click", () => refresh());
 
     dom.heatmapToggle.addEventListener("change", () => {
         dom.heatmapToggle.checked ? heatOverlay.enable() : heatOverlay.disable();
