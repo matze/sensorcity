@@ -7,6 +7,13 @@ const HISTORY_URL = `${SERVICE}/2/query`;
 
 export const STALE_AFTER_MS = 60 * 60 * 1000;
 
+// The FeatureServer mixes sensor kinds (see `beschreibung`): air-temperature
+// weather stations, `TSK-Container` waste-bin sensors, soil, rain and water-level
+// probes. Only the weather stations measure ambient air; the container sensors
+// report the temperature inside a metal bin and read wildly hot, so we keep the
+// weather stations alone for the list, map and heat map.
+const AIR_TEMPERATURE = "Temperatur";
+
 async function fetchJson(url, params) {
     // `no-store` skips conditional revalidation, which otherwise makes a manual
     // refresh come back as 304 Not Modified and always fetches the live reading.
@@ -33,6 +40,7 @@ function toSensor(feature) {
         humidity: a.luftfeuchte,
         pressure: a.press != null ? a.press / 100 : null,
         radiation: a.sonnenstrahlung,
+        kind: a.beschreibung,
         category: a.temperaturkategorien,
         measuredAt: a.measured_at,
         lon: geometry ? geometry.x : null,
@@ -52,7 +60,7 @@ export async function fetchSensors() {
 
     return data.features
         .map(toSensor)
-        .filter((sensor) => sensor.key && sensor.temp != null)
+        .filter((sensor) => sensor.key && sensor.temp != null && sensor.kind === AIR_TEMPERATURE)
         .sort((a, b) => a.key.localeCompare(b.key, "de"));
 }
 
