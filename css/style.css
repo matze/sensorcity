@@ -309,10 +309,37 @@ a:hover {
     flex: 1 1 auto;
 }
 
+.hero-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
 .hero {
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
+}
+
+.hero-trend {
+    font-size: 1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding-bottom: 0.45rem;
+}
+
+.hero-trend.up {
+    color: #d0663b;
+}
+
+.hero-trend.down {
+    color: var(--accent);
+}
+
+.hero-caption {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 .hero-value {
@@ -599,6 +626,46 @@ a:hover {
     stroke-linecap: round;
 }
 
+/* City-wide average, kept muted so the sensor's own line stays dominant. */
+.chart .reference-line {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    stroke-linejoin: round;
+    opacity: 0.55;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 1rem;
+    padding: 0.3rem 0.4rem 0.1rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.chart-legend .key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.chart-legend .key::before {
+    content: "";
+    width: 18px;
+    border-top: 2px solid var(--accent);
+}
+
+.chart-legend .key-ref::before {
+    border-top-style: dashed;
+    border-top-color: var(--text-muted);
+}
+
+.tooltip-ref {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
 .chart-empty,
 .chart-loading {
     display: flex;
@@ -659,6 +726,24 @@ a:hover {
     background: var(--surface);
     color: var(--text-primary);
     box-shadow: var(--shadow);
+}
+
+/* The list sort spans the sidebar width, one third per option. */
+.sort-controls {
+    display: flex;
+}
+
+.sort-controls button {
+    flex: 1 1 0;
+    text-align: center;
+}
+
+/* Metric and range pickers share the chart header, wrapping on narrow screens. */
+.chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
 }
 
 /* ---------- Footer ---------- */

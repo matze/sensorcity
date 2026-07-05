@@ -1,5 +1,6 @@
-// Hand-rolled SVG line chart for a single temperature series, with a hover
-// crosshair and tooltip. No chart library.
+// Hand-rolled SVG line chart for a single measured series, with a hover
+// crosshair and tooltip and an optional city-wide reference curve. No chart
+// library.
 
 import { COMFORT_MARKS } from "./scale.js";
 
@@ -40,8 +41,8 @@ function niceStep(span, targetTicks) {
 export class Chart {
     constructor(container) {
         this.container = container;
-        const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2a78d6";
-        this.colorFor = () => accent;
+        this.accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2a78d6";
+        this.colorFor = () => this.accent;
     }
 
     showLoading() {
@@ -53,8 +54,20 @@ export class Chart {
         this.container.innerHTML = `<div class="chart-empty">${text}</div>`;
     }
 
-    render(points, colorFor) {
-        this.colorFor = colorFor || this.colorFor;
+    // `points` is the selected sensor's series ({ time, value }); `options` carry
+    // the metric's units and formatting, an optional comfort overlay (temperature
+    // only) and an optional city-wide `reference` series to compare against.
+    render(points, options = {}) {
+        const {
+            colorFor, unit = "°C", axisUnit = "°", digits = 1,
+            comfortMarks = false, reference = null,
+        } = options;
+
+        this.colorFor = colorFor || (() => this.accent);
+        this.unit = unit;
+        this.axisUnit = axisUnit;
+        this.digits = digits;
+        this.reference = reference && reference.length >= 2 ? reference : null;
 
         if (!points || points.length < 2) {
             this.showMessage("Keine Verlaufsdaten für diesen Zeitraum.");
@@ -63,14 +76,15 @@ export class Chart {
 
         this.points = points;
         const times = points.map((p) => p.time.getTime());
-        const temps = points.map((p) => p.temp);
 
         this.tMin = Math.min(...times);
         this.tMax = Math.max(...times);
         const spanDays = (this.tMax - this.tMin) / 86400000;
 
-        let vMin = Math.min(...temps);
-        let vMax = Math.max(...temps);
+        const values = points.map((p) => p.value)
+            .concat(this.reference ? this.reference.map((p) => p.value) : []);
+        let vMin = Math.min(...values);
+        let vMax = Math.max(...values);
         const pad = Math.max(0.5, (vMax - vMin) * 0.1);
         vMin = Math.floor(vMin - pad);
         vMax = Math.ceil(vMax + pad);
@@ -81,7 +95,15 @@ export class Chart {
 
         this.drawYAxis(svg, vMin, vMax);
         this.drawXAxis(svg, spanDays);
-        this.drawComfortMarks(svg);
+
+        if (comfortMarks) {
+            this.drawComfortMarks(svg);
+        }
+
+        if (this.reference) {
+            this.drawReference(svg, this.reference);
+        }
+
         this.drawLine(svg, points);
 
         this.crosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
@@ -90,6 +112,15 @@ export class Chart {
 
         this.container.innerHTML = "";
         this.container.append(svg);
+
+        if (this.reference) {
+            const legend = document.createElement("div");
+            legend.className = "chart-legend";
+            legend.innerHTML =
+                '<span class="key key-series">Dieser Sensor</span>'
+                + '<span class="key key-ref">Netzmittel</span>';
+            this.container.append(legend);
+        }
 
         this.tooltip = document.createElement("div");
         this.tooltip.className = "chart-tooltip";
@@ -103,8 +134,8 @@ export class Chart {
         return MARGIN.left + ((time - this.tMin) / (this.tMax - this.tMin)) * PLOT_W;
     }
 
-    y(temp) {
-        return MARGIN.top + (1 - (temp - this.vMin) / (this.vMax - this.vMin)) * PLOT_H;
+    y(value) {
+        return MARGIN.top + (1 - (value - this.vMin) / (this.vMax - this.vMin)) * PLOT_H;
     }
 
     drawYAxis(svg, vMin, vMax) {
@@ -114,7 +145,7 @@ export class Chart {
             const y = this.y(v);
             svg.append(el("line", { class: "grid-line", x1: MARGIN.left, x2: MARGIN.left + PLOT_W, y1: y, y2: y }));
             const label = el("text", { class: "axis-label", x: MARGIN.left - 8, y: y + 3, "text-anchor": "end" });
-            label.textContent = `${v}°`;
+            label.textContent = `${v}${this.axisUnit}`;
             svg.append(label);
         }
     }
@@ -154,46 +185,63 @@ export class Chart {
         }
     }
 
-    // One short path per interval, each stroked by the interval's mean
-    // temperature, so the line itself reads the color scale over time.
+    // The city-wide average as one muted, dashed line so the sensor reads as
+    // above or below the network at a glance.
+    drawReference(svg, points) {
+        const d = points
+            .map((p, i) => `${i ? "L" : "M"}${this.x(p.time.getTime()).toFixed(1)} ${this.y(p.value).toFixed(1)}`)
+            .join(" ");
+        svg.append(el("path", { class: "reference-line", d }));
+    }
+
+    // One short path per interval, each stroked by the interval's mean value, so
+    // the line itself reads the color scale over time.
     drawLine(svg, points) {
         for (let i = 1; i < points.length; i++) {
             const a = points[i - 1];
             const b = points[i];
-            const d = `M${this.x(a.time.getTime()).toFixed(1)} ${this.y(a.temp).toFixed(1)}`
-                + ` L${this.x(b.time.getTime()).toFixed(1)} ${this.y(b.temp).toFixed(1)}`;
-            svg.append(el("path", { class: "series-line", d, stroke: this.colorFor((a.temp + b.temp) / 2) }));
+            const d = `M${this.x(a.time.getTime()).toFixed(1)} ${this.y(a.value).toFixed(1)}`
+                + ` L${this.x(b.time.getTime()).toFixed(1)} ${this.y(b.value).toFixed(1)}`;
+            svg.append(el("path", { class: "series-line", d, stroke: this.colorFor((a.value + b.value) / 2) }));
         }
 
         const last = points[points.length - 1];
         svg.append(el("circle", {
-            cx: this.x(last.time.getTime()), cy: this.y(last.temp), r: 4,
-            fill: this.colorFor(last.temp), stroke: "var(--surface)", "stroke-width": 2,
+            cx: this.x(last.time.getTime()), cy: this.y(last.value), r: 4,
+            fill: this.colorFor(last.value), stroke: "var(--surface)", "stroke-width": 2,
         }));
     }
 
+    nearest(series, time) {
+        return series.reduce((best, p) =>
+            Math.abs(p.time.getTime() - time) < Math.abs(best.time.getTime() - time) ? p : best);
+    }
+
     bindHover() {
+        const fmt = (value) => value.toFixed(this.digits);
+
         const move = (event) => {
             const rect = this.svg.getBoundingClientRect();
             const clientX = event.touches ? event.touches[0].clientX : event.clientX;
             const svgX = ((clientX - rect.left) / rect.width) * VIEW_W;
             const time = this.tMin + ((svgX - MARGIN.left) / PLOT_W) * (this.tMax - this.tMin);
 
-            const nearest = this.points.reduce((best, p) =>
-                Math.abs(p.time.getTime() - time) < Math.abs(best.time.getTime() - time) ? p : best);
-
-            const px = this.x(nearest.time.getTime());
-            const py = this.y(nearest.temp);
+            const point = this.nearest(this.points, time);
+            const px = this.x(point.time.getTime());
+            const py = this.y(point.value);
             this.crosshair.setAttribute("x1", px);
             this.crosshair.setAttribute("x2", px);
             this.crosshair.setAttribute("opacity", 1);
             this.marker.setAttribute("cx", px);
             this.marker.setAttribute("cy", py);
-            this.marker.setAttribute("fill", this.colorFor(nearest.temp));
+            this.marker.setAttribute("fill", this.colorFor(point.value));
             this.marker.setAttribute("opacity", 1);
 
+            const ref = this.reference ? this.nearest(this.reference, point.time.getTime()) : null;
             this.tooltip.innerHTML =
-                `<strong>${nearest.temp.toFixed(1)} °C</strong><br>${fullFmt.format(nearest.time)}`;
+                `<strong>${fmt(point.value)} ${this.unit}</strong>`
+                + (ref ? `<br><span class="tooltip-ref">Netz ${fmt(ref.value)} ${this.unit}</span>` : "")
+                + `<br>${fullFmt.format(point.time)}`;
             const box = this.container.getBoundingClientRect();
             this.tooltip.style.left = `${rect.left - box.left + (px / VIEW_W) * rect.width}px`;
             this.tooltip.style.top = `${rect.top - box.top + (py / VIEW_H) * rect.height}px`;

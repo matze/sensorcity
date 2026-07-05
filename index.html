@@ -19,7 +19,12 @@
             <div class="search-row">
                 <input id="sensorSearch" type="search" placeholder="Standort suchen …" autocomplete="off" spellcheck="false">
             </div>
-            <ol id="sensorList" class="sensor-list" aria-label="Sensoren, alphabetisch sortiert">
+            <div id="sortControls" class="segmented sort-controls" role="group" aria-label="Sortierung">
+                <button type="button" data-sort="name" class="active" title="Alphabetisch">A–Z</button>
+                <button type="button" data-sort="warm" title="Wärmste zuerst">Wärmste</button>
+                <button type="button" data-sort="cold" title="Kälteste zuerst">Kälteste</button>
+            </div>
+            <ol id="sensorList" class="sensor-list" aria-label="Sensoren">
                 <li class="list-placeholder">
                     <span class="loader"><i></i><i></i><i></i></span> Lade Sensoren …
                 </li>
@@ -51,11 +56,19 @@
 
             <div class="panel chart-panel">
                 <div class="panel-head">
-                    <h2>Temperaturverlauf</h2>
-                    <div id="rangeControls" class="range-controls" role="group" aria-label="Zeitraum">
-                        <button type="button" data-days="1">24 h</button>
-                        <button type="button" data-days="7" class="active">7 Tage</button>
-                        <button type="button" data-days="30">30 Tage</button>
+                    <h2>Verlauf</h2>
+                    <div class="chart-controls">
+                        <div id="metricControls" class="segmented" role="group" aria-label="Messgröße">
+                            <button type="button" data-metric="temp" class="active" title="Temperatur">Temp</button>
+                            <button type="button" data-metric="humidity" title="Luftfeuchtigkeit">Luftfeuchtigkeit</button>
+                            <button type="button" data-metric="pressure" title="Luftdruck">Druck</button>
+                            <button type="button" data-metric="radiation" title="Sonneneinstrahlung">Sonne</button>
+                        </div>
+                        <div id="rangeControls" class="range-controls" role="group" aria-label="Zeitraum">
+                            <button type="button" data-days="1">24 h</button>
+                            <button type="button" data-days="7" class="active">7 Tage</button>
+                            <button type="button" data-days="30">30 Tage</button>
+                        </div>
                     </div>
                 </div>
                 <div id="chart" class="chart"></div>

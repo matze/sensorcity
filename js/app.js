@@ -3,7 +3,7 @@
 
 import { fetchSensors, fetchHistory, STALE_AFTER_MS } from "./api.js";
 import { makeScale, COMFORT, RELATIVE } from "./scale.js";
-import { selectedKeyFromUrl, writeSelectedToUrl, onUrlChange } from "./state.js";
+import { selectedKeyFromUrl, writeSelectedToUrl, onUrlChange, readParam, writeParam } from "./state.js";
 import { SensorMap } from "./map.js";
 import { HeatOverlay } from "./heatmap.js";
 import { Chart } from "./chart.js";
@@ -11,12 +11,29 @@ import { Chart } from "./chart.js";
 const REFRESH_MS = 5 * 60 * 1000;
 const DEFAULT_STATION = "Ettlinger Strasse - Kreuzung Kriegsstrasse";
 
+// The chartable measures. `field` maps to api.js; `comfort` marks temperature as
+// the only one carrying the comfort color scale and reference lines.
+const METRICS = {
+    temp: { field: "temp", label: "Temperatur", unit: "°C", axisUnit: "°", digits: 1, comfort: true },
+    humidity: { field: "humidity", label: "Luftfeuchte", unit: "%", axisUnit: "%", digits: 0, comfort: false },
+    pressure: { field: "pressure", label: "Luftdruck", unit: "hPa", axisUnit: "", digits: 0, comfort: false },
+    radiation: { field: "radiation", label: "Sonne", unit: "W/m²", axisUnit: "", digits: 0, comfort: false },
+};
+
+const SORTS = {
+    name: (a, b) => a.key.localeCompare(b.key, "de"),
+    warm: (a, b) => b.temp - a.temp,
+    cold: (a, b) => a.temp - b.temp,
+};
+
 const dom = {
     list: document.getElementById("sensorList"),
     search: document.getElementById("sensorSearch"),
+    sortControls: document.getElementById("sortControls"),
     detail: document.getElementById("detail"),
     heatControl: document.getElementById("heatControl"),
     rangeControls: document.getElementById("rangeControls"),
+    metricControls: document.getElementById("metricControls"),
     legend: document.getElementById("scaleLegend"),
 };
 
@@ -25,11 +42,18 @@ const state = {
     byKey: new Map(),
     selectedKey: null,
     rangeDays: 7,
+    metric: "temp",
+    sort: "name",
     // The one control has three positions: "off" (no overlay, comfort colors),
     // "comfort" and "relative" (overlay on, that scale everywhere).
     heatMode: "off",
     scaleMode: COMFORT,
     historyPoints: null,
+    reference: null,
+    trend: null,
+    // City-wide reference curves, keyed by `${field}:${days}`; shared by every
+    // sensor so switching selection never refetches the network average.
+    referenceCache: new Map(),
 };
 
 const chart = new Chart(document.getElementById("chart"));
@@ -54,7 +78,9 @@ function minutesAgo(sensor) {
 
 function renderList(filter = "") {
     const needle = filter.trim().toLowerCase();
-    const matches = state.sensors.filter((sensor) => sensor.key.toLowerCase().includes(needle));
+    const matches = state.sensors
+        .filter((sensor) => sensor.key.toLowerCase().includes(needle))
+        .sort(SORTS[state.sort]);
 
     dom.list.innerHTML = "";
 
@@ -118,10 +144,14 @@ function renderDetail(sensor) {
             </span>
         </div>
         <div class="detail-body">
-            <div class="hero">
-                <span class="hero-dot" style="background:${color}"></span>
-                <span class="hero-value">${sensor.temp.toFixed(1)}</span>
-                <span class="hero-unit">°C</span>
+            <div class="hero-block">
+                <div class="hero">
+                    <span class="hero-dot" style="background:${color}"></span>
+                    <span class="hero-value">${sensor.temp.toFixed(1)}</span>
+                    <span class="hero-unit">°C</span>
+                    ${trendBadge(state.trend)}
+                </div>
+                ${heroCaption(sensor)}
             </div>
             <div class="metric-grid">
                 ${metric("Luftfeuchtigkeit", sensor.humidity, "%")}
@@ -129,6 +159,47 @@ function renderDetail(sensor) {
                 ${metric("Sonneneinstrahlung", sensor.radiation, "W/m²", 0)}
             </div>
         </div>`;
+}
+
+// Arrow and signed delta against the reading of ~24 h ago; nothing when the
+// history for it hasn't loaded or the change is negligible.
+function trendBadge(trend) {
+    if (trend == null || Math.abs(trend) < 0.1) {
+        return "";
+    }
+
+    const rising = trend > 0;
+
+    return `<span class="hero-trend ${rising ? "up" : "down"}" title="gegenüber gestern">`
+        + `${rising ? "▲" : "▼"} ${Math.abs(trend).toFixed(1)}°</span>`;
+}
+
+// Only the apparent temperature, and only when heat and humidity pull it away
+// from the reading — the color scale already conveys plain comfort.
+function heroCaption(sensor) {
+    const feels = apparentTemp(sensor.temp, sensor.humidity);
+
+    if (feels == null || Math.abs(feels - sensor.temp) < 1) {
+        return "";
+    }
+
+    return `<div class="hero-caption">gefühlt ${feels.toFixed(0)} °C</div>`;
+}
+
+// Heat-index apparent temperature (Rothfusz), valid in warm, humid air; null
+// outside that range where the formula does not apply.
+function apparentTemp(temp, humidity) {
+    if (temp == null || humidity == null || temp < 27) {
+        return null;
+    }
+
+    const f = temp * 9 / 5 + 32;
+    const hi = -42.379 + 2.04901523 * f + 10.14333127 * humidity
+        - 0.22475541 * f * humidity - 0.00683783 * f * f
+        - 0.05481717 * humidity * humidity + 0.00122874 * f * f * humidity
+        + 0.00085282 * f * humidity * humidity - 0.00000199 * f * f * humidity * humidity;
+
+    return (hi - 32) * 5 / 9;
 }
 
 function metric(label, value, unit, digits = 1) {
@@ -153,6 +224,7 @@ async function select(key, { fromUrl = false } = {}) {
     }
 
     state.selectedKey = key;
+    state.trend = null;
 
     if (!fromUrl) {
         writeSelectedToUrl(key);
@@ -163,36 +235,93 @@ async function select(key, { fromUrl = false } = {}) {
     renderDetail(sensor);
     updateListSelection();
     sensorMap.highlight(key);
-    await loadHistory(sensor);
+    await Promise.all([loadHistory(sensor), loadTrend(sensor)]);
 }
 
 async function loadHistory(sensor) {
     chart.showLoading();
     state.historyPoints = null;
+    state.reference = null;
+
+    const { field } = METRICS[state.metric];
 
     try {
-        const points = await fetchHistory(sensor.deviceId, state.rangeDays);
+        const [points, reference] = await Promise.all([
+            fetchHistory({ deviceId: sensor.deviceId, days: state.rangeDays, field }),
+            loadReference(field, state.rangeDays),
+        ]);
 
-        if (state.selectedKey !== sensor.key) {
-            return; // selection changed while loading
+        if (state.selectedKey !== sensor.key || state.metric !== metricKeyFor(field)) {
+            return; // selection or metric changed while loading
         }
 
         state.historyPoints = points;
+        state.reference = reference;
         renderChart();
     } catch (error) {
         chart.showMessage(`Verlauf nicht verfügbar (${error.message}).`);
     }
 }
 
+// The city-wide average for the active metric and range, fetched once and then
+// served from the cache; a failure just drops the reference line.
+async function loadReference(field, days) {
+    const cacheKey = `${field}:${days}`;
+
+    if (state.referenceCache.has(cacheKey)) {
+        return state.referenceCache.get(cacheKey);
+    }
+
+    try {
+        const points = await fetchHistory({ days, field });
+        state.referenceCache.set(cacheKey, points);
+        return points;
+    } catch {
+        return null;
+    }
+}
+
+function metricKeyFor(field) {
+    return Object.keys(METRICS).find((key) => METRICS[key].field === field);
+}
+
+// The temperature change against ~24 h ago, shown next to the hero value.
+async function loadTrend(sensor) {
+    try {
+        const points = await fetchHistory({ deviceId: sensor.deviceId, days: 1, field: "temp" });
+
+        if (state.selectedKey !== sensor.key || points.length === 0) {
+            return;
+        }
+
+        state.trend = Math.round((sensor.temp - points[0].value) * 10) / 10;
+        renderDetail(sensor);
+    } catch {
+        /* the trend badge is optional; leave it off on failure */
+    }
+}
+
 // Color the history line by the active mode, over the series' own range in
-// relative mode so a single day still shows contrast.
+// relative mode so a single day still shows contrast. Only temperature carries
+// the comfort scale and reference curve; other metrics use the plain accent.
 function renderChart() {
     if (!state.historyPoints) {
         return;
     }
 
-    const scale = makeScale(state.scaleMode, state.historyPoints.map((point) => point.temp));
-    chart.render(state.historyPoints, scale.color);
+    const metric = METRICS[state.metric];
+    const colorFor = metric.comfort
+        ? makeScale(state.scaleMode, state.historyPoints.map((point) => point.value)).color
+        : null;
+
+    chart.render(state.historyPoints, {
+        colorFor,
+        unit: metric.unit,
+        axisUnit: metric.axisUnit,
+        digits: metric.digits,
+        comfortMarks: metric.comfort,
+        reference: state.reference,
+    });
 }
 
 // ---------- Data loading ----------
@@ -208,6 +337,14 @@ async function loadSensors() {
     renderList(dom.search.value);
     sensorMap.setSensors(sensors, networkScale);
     heatOverlay.setData(sensors, networkScale);
+
+    if (state.heatMode === "off") {
+        heatOverlay.disable();
+    } else {
+        heatOverlay.applyScale(networkScale);
+        heatOverlay.enable();
+    }
+
     renderLegend();
 }
 
@@ -240,6 +377,7 @@ function setHeatMode(mode) {
     }
 
     state.heatMode = mode;
+    writeParam("heat", mode === "off" ? null : mode);
     dom.heatControl.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
 
     const scaleMode = mode === "relative" ? RELATIVE : COMFORT;
@@ -304,20 +442,86 @@ async function refresh({ initial = false } = {}) {
 
 // ---------- Wiring ----------
 
+// Mark the one button in a segmented control whose `data-<attr>` equals `value`.
+function markActive(container, attr, value) {
+    container.querySelectorAll("button").forEach((button) =>
+        button.classList.toggle("active", button.dataset[attr] === String(value)));
+}
+
+// Restore range, metric, sort and heat mode from the query so a shared link
+// reopens the same view. Runs before the first load, so no refetch here.
+function restoreViewFromUrl() {
+    const days = Number(readParam("days"));
+
+    if ([1, 7, 30].includes(days)) {
+        state.rangeDays = days;
+    }
+
+    if (METRICS[readParam("metric")]) {
+        state.metric = readParam("metric");
+    }
+
+    if (SORTS[readParam("sort")]) {
+        state.sort = readParam("sort");
+    }
+
+    if (["comfort", "relative"].includes(readParam("heat"))) {
+        state.heatMode = readParam("heat");
+        state.scaleMode = state.heatMode === "relative" ? RELATIVE : COMFORT;
+    }
+
+    markActive(dom.rangeControls, "days", state.rangeDays);
+    markActive(dom.metricControls, "metric", state.metric);
+    markActive(dom.sortControls, "sort", state.sort);
+    markActive(dom.heatControl, "mode", state.heatMode);
+}
+
 function init() {
     sensorMap = new SensorMap("map", (key) => select(key));
     heatOverlay = new HeatOverlay(sensorMap.instance, networkScale);
     sensorMap.onViewChange(() => heatOverlay.draw());
 
+    restoreViewFromUrl();
     renderLegend();
 
     dom.search.addEventListener("input", () => renderList(dom.search.value));
+
+    dom.sortControls.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-sort]");
+
+        if (!button) {
+            return;
+        }
+
+        state.sort = button.dataset.sort;
+        writeParam("sort", state.sort === "name" ? null : state.sort);
+        markActive(dom.sortControls, "sort", state.sort);
+        renderList(dom.search.value);
+    });
 
     dom.heatControl.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-mode]");
 
         if (button) {
             setHeatMode(button.dataset.mode);
+        }
+    });
+
+    dom.metricControls.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-metric]");
+
+        if (!button || button.dataset.metric === state.metric) {
+            return;
+        }
+
+        state.metric = button.dataset.metric;
+        writeParam("metric", state.metric === "temp" ? null : state.metric);
+        markActive(dom.metricControls, "metric", state.metric);
+
+        const sensor = state.byKey.get(state.selectedKey);
+
+        if (sensor) {
+            loadHistory(sensor);
         }
     });
 
@@ -329,7 +533,8 @@ function init() {
         }
 
         state.rangeDays = Number(button.dataset.days);
-        dom.rangeControls.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === button));
+        writeParam("days", state.rangeDays === 7 ? null : state.rangeDays);
+        markActive(dom.rangeControls, "days", state.rangeDays);
 
         const sensor = state.byKey.get(state.selectedKey);
 

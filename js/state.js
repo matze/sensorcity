@@ -30,3 +30,21 @@ export function writeSelectedToUrl(key) {
 export function onUrlChange(callback) {
     window.addEventListener("popstate", () => callback(selectedKeyFromUrl()));
 }
+
+// Extra view state (range, chart metric, heat mode, sort) kept in the query so a
+// shared link restores the whole view, not just the sensor.
+export function readParam(name) {
+    return new URLSearchParams(location.search).get(name);
+}
+
+export function writeParam(name, value) {
+    const url = new URL(location.href);
+
+    if (value == null) {
+        url.searchParams.delete(name);
+    } else {
+        url.searchParams.set(name, value);
+    }
+
+    history.replaceState({}, "", url);
+}

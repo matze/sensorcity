@@ -68,9 +68,21 @@ function isoDay(date) {
     return date.toISOString().split("T")[0];
 }
 
-// Hourly average temperature for one device over the last `days` days.
-// Returns points sorted by time: { time: Date, temp: number }.
-export async function fetchHistory(deviceId, days) {
+// The measured columns that can be charted over time, with the factor to bring
+// them into the display unit (`press` is Pascal, shown as hectopascal).
+const HISTORY_FIELDS = {
+    temp: { column: "temp", factor: 1 },
+    humidity: { column: "luftfeuchte", factor: 1 },
+    pressure: { column: "press", factor: 1 / 100 },
+    radiation: { column: "sonnenstrahlung", factor: 1 },
+};
+
+// Hourly average of one measured field over the last `days` days. With a
+// `deviceId` it covers a single sensor; without one it averages across the whole
+// air-temperature network, giving the city-wide reference curve. Returns points
+// sorted by time: { time: Date, value: number }.
+export async function fetchHistory({ deviceId = null, days, field = "temp" }) {
+    const { column, factor } = HISTORY_FIELDS[field];
     const now = new Date();
     const until = new Date(now);
     until.setDate(until.getDate() + 1);
@@ -80,18 +92,20 @@ export async function fetchHistory(deviceId, days) {
     const extract = (unit) =>
         `EXTRACT(${unit} FROM measured_at  +INTERVAL '1:59:59' HOUR TO SECOND)`;
 
+    const scope = deviceId ? `device_id='${deviceId}'` : `beschreibung='${AIR_TEMPERATURE}'`;
+
     const data = await fetchJson(HISTORY_URL, {
         f: "json",
         cacheHint: "true",
         groupByFieldsForStatistics: ["YEAR", "MONTH", "DAY", "HOUR"].map(extract).join(","),
-        outFields: "objectid,temp,measured_at",
+        outFields: `objectid,${column},measured_at`,
         outStatistics: JSON.stringify([
-            { onStatisticField: "temp", outStatisticFieldName: "value", statisticType: "avg" },
+            { onStatisticField: column, outStatisticFieldName: "value", statisticType: "avg" },
         ]),
         resultType: "standard",
         returnGeometry: "false",
         spatialRel: "esriSpatialRelIntersects",
-        where: `((measured_at BETWEEN timestamp '${isoDay(from)} 00:00:00' AND timestamp '${isoDay(until)} 00:00:00')) AND (device_id='${deviceId}')`,
+        where: `((measured_at BETWEEN timestamp '${isoDay(from)} 00:00:00' AND timestamp '${isoDay(until)} 00:00:00')) AND (${scope})`,
     });
 
     return data.features
@@ -99,9 +113,9 @@ export async function fetchHistory(deviceId, days) {
             const a = feature.attributes;
             return {
                 time: new Date(a.EXPR_1, a.EXPR_2 - 1, a.EXPR_3, a.EXPR_4),
-                temp: Math.round(a.value * 10) / 10,
+                value: Math.round(a.value * factor * 10) / 10,
             };
         })
-        .filter((point) => Number.isFinite(point.temp))
+        .filter((point) => Number.isFinite(point.value))
         .sort((a, b) => a.time - b.time);
 }
