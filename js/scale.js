@@ -44,11 +44,9 @@ function comfortScale() {
     const span = COMFORT_MAX - COMFORT_MIN;
     const frac = (t) => (Math.min(COMFORT_MAX, Math.max(COMFORT_MIN, t)) - COMFORT_MIN) / span;
 
-    const ticks = [];
-
-    for (let t = Math.ceil(COMFORT_MIN / 10) * 10; t <= COMFORT_MAX; t += 10) {
-        ticks.push({ label: `${t}°`, pos: frac(t) * 100 });
-    }
+    // Label the fixed bar with the qualitative comfort levels rather than bare
+    // numbers, so a color reads as a felt temperature.
+    const ticks = COMFORT_MARKS.map(({ temp, label }) => ({ label, pos: frac(temp) * 100 }));
 
     return {
         mode: COMFORT,
@@ -56,23 +54,9 @@ function comfortScale() {
         color: (t) => rgbString(interpolate(COMFORT_TEMPS, t)),
         gradientCss: (dir) => gradientCss(COMFORT_TEMPS.map((t) => [Math.round(frac(t) * 100), interpolate(COMFORT_TEMPS, t)]), dir),
         ticks: () => ticks,
-        // The fixed bar covers the whole comfort range, so mark where the current
-        // readings actually sit within it.
-        nowSpan: (values) => {
-            const usable = values.filter((v) => v != null && Number.isFinite(v));
-
-            if (usable.length === 0) {
-                return null;
-            }
-
-            const low = Math.min(...usable);
-            const high = Math.max(...usable);
-            return {
-                left: frac(low) * 100,
-                width: (frac(high) - frac(low)) * 100,
-                label: `jetzt ${fmt.format(low)}–${fmt.format(high)} °C`,
-            };
-        },
+        // Position (0..100) of a single reading within the fixed range, for the
+        // marker showing where the selected station sits. Null when unusable.
+        pointPos: (t) => (t != null && Number.isFinite(t) ? frac(t) * 100 : null),
     };
 }
 
@@ -92,7 +76,6 @@ function relativeScale(temps) {
             { label: `${fmt.format((min + max) / 2)}°`, pos: 50 },
             { label: `${fmt.format(max)}°`, pos: 100 },
         ],
-        // The whole bar already is the current range; no extra marker needed.
-        nowSpan: () => null,
+        pointPos: (t) => (t != null && Number.isFinite(t) ? frac(t) * 100 : null),
     };
 }

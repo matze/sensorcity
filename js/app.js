@@ -64,8 +64,6 @@ let heatOverlay;
 // map and the legend. The chart builds its own scale over one series.
 let networkScale = makeScale(COMFORT, []);
 
-const numberFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
-
 function isStale(sensor) {
     return Date.now() - sensor.measuredAt > STALE_AFTER_MS;
 }
@@ -234,6 +232,7 @@ async function select(key, { fromUrl = false } = {}) {
 
     renderDetail(sensor);
     updateListSelection();
+    renderLegend();
     sensorMap.highlight(key);
     await Promise.all([loadHistory(sensor), loadTrend(sensor)]);
 }
@@ -369,16 +368,16 @@ function renderLegend() {
             return `<span style="left:${tick.pos.toFixed(1)}%;transform:translateX(${shift})">${tick.label}</span>`;
         })
         .join("");
-    const now = networkScale.nowSpan(state.sensors.map((sensor) => sensor.temp));
-    const marker = now
-        ? `<div class="scale-legend-now" style="left:${now.left.toFixed(1)}%;width:${now.width.toFixed(1)}%"></div>`
+    const selected = state.byKey.get(state.selectedKey);
+    const pos = selected ? networkScale.pointPos(selected.temp) : null;
+    // Inset the dot's center by its radius so it stays fully on the bar at the ends.
+    const marker = pos != null
+        ? `<div class="scale-legend-dot" style="left:calc(var(--dot) / 2 + (100% - var(--dot)) * ${(pos / 100).toFixed(4)})"></div>`
         : "";
-    const caption = now ? now.label : "";
 
     dom.legend.innerHTML =
         `<div class="scale-legend-bar" style="background:${networkScale.gradientCss()}">${marker}</div>`
-        + `<div class="scale-legend-ticks">${ticks}</div>`
-        + `<div class="scale-legend-caption">${caption}</div>`;
+        + `<div class="scale-legend-ticks">${ticks}</div>`;
 }
 
 // The 3-state map control: "off" hides the overlay and colors everything with

@@ -489,20 +489,24 @@ a:hover {
 }
 
 .scale-legend-bar {
+    --dot: 14px;
     position: relative;
     height: 10px;
     border-radius: 3px;
 }
 
-.scale-legend-now {
+.scale-legend-dot {
     position: absolute;
-    top: -3px;
-    height: 16px;
-    min-width: 3px;
+    top: 50%;
+    width: var(--dot);
+    height: var(--dot);
+    transform: translateY(-50%);
     box-sizing: border-box;
+    border-radius: 50%;
     border: 2px solid var(--surface);
-    border-radius: 4px;
-    box-shadow: 0 0 0 1.5px var(--text-primary);
+    /* A solid 2px ring (not a thin sub-pixel one) so the outline stays crisp at
+       the top and bottom tangents under fractional browser zoom. */
+    box-shadow: 0 0 0 2px var(--text-primary);
 }
 
 .scale-legend-ticks {
@@ -518,15 +522,6 @@ a:hover {
     font-variant-numeric: tabular-nums;
     color: var(--text-secondary);
     white-space: nowrap;
-}
-
-.scale-legend-caption {
-    margin-top: 0.1rem;
-    text-align: center;
-    font-size: 0.72rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-muted);
-    min-height: 0.9rem;
 }
 
 .map-tools-label {
