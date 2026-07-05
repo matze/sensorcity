@@ -2,7 +2,7 @@
 // history chart, and keeps the selection in sync with the URL.
 
 import { fetchSensors, fetchHistory, STALE_AFTER_MS } from "./api.js";
-import { makeScale, COMFORT } from "./scale.js";
+import { makeScale, COMFORT, RELATIVE } from "./scale.js";
 import { selectedKeyFromUrl, writeSelectedToUrl, onUrlChange } from "./state.js";
 import { SensorMap } from "./map.js";
 import { HeatOverlay } from "./heatmap.js";
@@ -15,9 +15,8 @@ const dom = {
     list: document.getElementById("sensorList"),
     search: document.getElementById("sensorSearch"),
     detail: document.getElementById("detail"),
-    heatmapToggle: document.getElementById("heatmapToggle"),
+    heatControl: document.getElementById("heatControl"),
     rangeControls: document.getElementById("rangeControls"),
-    scaleMode: document.getElementById("scaleMode"),
     legend: document.getElementById("scaleLegend"),
 };
 
@@ -26,6 +25,9 @@ const state = {
     byKey: new Map(),
     selectedKey: null,
     rangeDays: 7,
+    // The one control has three positions: "off" (no overlay, comfort colors),
+    // "comfort" and "relative" (overlay on, that scale everywhere).
+    heatMode: "off",
     scaleMode: COMFORT,
     historyPoints: null,
 };
@@ -230,15 +232,34 @@ function renderLegend() {
         + `<div class="scale-legend-caption">${caption}</div>`;
 }
 
-function setScaleMode(mode) {
-    if (mode === state.scaleMode) {
+// The 3-state map control: "off" hides the overlay and colors everything with
+// the comfort scale; "comfort"/"relative" turn the overlay on with that scale.
+function setHeatMode(mode) {
+    if (mode === state.heatMode) {
         return;
     }
 
-    state.scaleMode = mode;
-    dom.scaleMode.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
+    state.heatMode = mode;
+    dom.heatControl.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
 
-    networkScale = makeScale(mode, state.sensors.map((sensor) => sensor.temp));
+    const scaleMode = mode === "relative" ? RELATIVE : COMFORT;
+
+    if (scaleMode !== state.scaleMode) {
+        state.scaleMode = scaleMode;
+        recolorForScale();
+    }
+
+    if (mode === "off") {
+        heatOverlay.disable();
+    } else {
+        heatOverlay.applyScale(networkScale);
+        heatOverlay.enable();
+    }
+}
+
+// Rebuild the network scale and repaint everything it colors.
+function recolorForScale() {
+    networkScale = makeScale(state.scaleMode, state.sensors.map((sensor) => sensor.temp));
     renderList(dom.search.value);
 
     const selected = state.byKey.get(state.selectedKey);
@@ -248,7 +269,6 @@ function setScaleMode(mode) {
     }
 
     sensorMap.applyScale(networkScale);
-    heatOverlay.applyScale(networkScale);
     renderLegend();
     renderChart();
 }
@@ -293,23 +313,13 @@ function init() {
 
     dom.search.addEventListener("input", () => renderList(dom.search.value));
 
-    dom.scaleMode.addEventListener("click", (event) => {
+    dom.heatControl.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-mode]");
 
         if (button) {
-            setScaleMode(button.dataset.mode);
+            setHeatMode(button.dataset.mode);
         }
     });
-
-    dom.heatmapToggle.addEventListener("change", () => {
-        dom.heatmapToggle.checked ? heatOverlay.enable() : heatOverlay.disable();
-    });
-
-    // Browsers restore the checkbox state across reloads without firing `change`,
-    // so honor a restored "checked" by enabling the overlay explicitly.
-    if (dom.heatmapToggle.checked) {
-        heatOverlay.enable();
-    }
 
     dom.rangeControls.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-days]");

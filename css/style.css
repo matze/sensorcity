@@ -486,14 +486,9 @@ a:hover {
     min-height: 0.9rem;
 }
 
-.toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+.map-tools-label {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    cursor: pointer;
-    user-select: none;
 }
 
 .marker-dot {

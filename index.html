@@ -37,14 +37,12 @@
                 <div class="panel-head">
                     <h2>Karte</h2>
                     <div class="map-tools">
-                        <div id="scaleMode" class="segmented" role="group" aria-label="Farbskala">
-                            <button type="button" data-mode="comfort" class="active" title="Feste Skala nach Wohlfühl-Temperatur">Komfort</button>
-                            <button type="button" data-mode="relative" title="Skala auf die aktuellen Messwerte gedehnt">Relativ</button>
+                        <span class="map-tools-label">Wärmekarte</span>
+                        <div id="heatControl" class="segmented" role="group" aria-label="Wärmekarte und Farbskala">
+                            <button type="button" data-mode="off" class="active" title="Wärmekarte aus">Aus</button>
+                            <button type="button" data-mode="comfort" title="Wärmekarte an · feste Skala nach Wohlfühl-Temperatur">Komfort</button>
+                            <button type="button" data-mode="relative" title="Wärmekarte an · Skala auf die aktuellen Messwerte gedehnt">Relativ</button>
                         </div>
-                        <label class="toggle">
-                            <input id="heatmapToggle" type="checkbox">
-                            <span>Wärmekarte</span>
-                        </label>
                     </div>
                 </div>
                 <div id="map" class="map" role="application" aria-label="Sensorkarte"></div>
