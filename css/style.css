@@ -448,8 +448,20 @@ a:hover {
 }
 
 .heat-legend-bar {
+    position: relative;
     height: 10px;
     border-radius: 3px;
+}
+
+.heat-legend-now {
+    position: absolute;
+    top: -3px;
+    height: 16px;
+    min-width: 3px;
+    box-sizing: border-box;
+    border: 2px solid var(--surface);
+    border-radius: 4px;
+    box-shadow: 0 0 0 1.5px var(--text-primary);
 }
 
 .heat-legend-ticks {
@@ -465,6 +477,14 @@ a:hover {
     font-variant-numeric: tabular-nums;
     color: var(--text-secondary);
     white-space: nowrap;
+}
+
+.heat-legend-caption {
+    margin-top: 0.15rem;
+    text-align: center;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
 }
 
 .toggle {
