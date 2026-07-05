@@ -546,6 +546,11 @@ a:hover {
     letter-spacing: 0.02em;
 }
 
+.chart .comfort-tick {
+    stroke: var(--axis);
+    stroke-width: 1;
+}
+
 .chart .grid-line {
     stroke: var(--gridline);
     stroke-width: 1;

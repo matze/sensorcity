@@ -136,16 +136,17 @@ export class Chart {
     // Comfort reference labels in the right gutter, at their absolute
     // temperature, for those that fall within the visible range.
     drawComfortMarks(svg) {
+        const edge = MARGIN.left + PLOT_W;
+
         for (const { temp, label } of COMFORT_MARKS) {
             if (temp < this.vMin || temp > this.vMax) {
                 continue;
             }
 
-            const node = el("text", {
-                class: "comfort-label",
-                x: MARGIN.left + PLOT_W + 8,
-                y: this.y(temp) + 3,
-            });
+            const y = this.y(temp);
+            svg.append(el("line", { class: "comfort-tick", x1: edge, x2: edge + 5, y1: y, y2: y }));
+
+            const node = el("text", { class: "comfort-label", x: edge + 10, y: y + 3 });
             node.textContent = label;
             svg.append(node);
         }
