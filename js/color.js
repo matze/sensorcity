@@ -1,13 +1,13 @@
 // Low-level thermal ramp shared by every temperature scale (see scale.js): five
-// RGB stops going cold blue → light neutral pivot → warm red. Higher layers pin
+// RGB stops going cold blue → warm cream pivot → warm red. Higher layers pin
 // these stops to either absolute degrees (comfort) or a data range (relative).
 
 const COLORS = [
-    [42, 92, 171],   // deep blue    – coldest
-    [86, 152, 231],  // blue
-    [235, 234, 228], // light neutral pivot
-    [235, 104, 52],  // orange
-    [208, 59, 59],   // red          – hottest
+    [40, 104, 178],  // blue         – coldest
+    [125, 177, 221], // light blue
+    [238, 226, 193], // warm cream pivot
+    [232, 138, 74],  // orange
+    [201, 66, 58],   // red          – hottest
 ];
 
 // Even-ish stop positions (0..1) for a data-relative diverging ramp.
