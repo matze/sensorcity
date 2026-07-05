@@ -14,6 +14,12 @@ import { interpolate, FRACTIONS, rgbString, gradientCss } from "./color.js";
 // Absolute anchors placing the neutral pivot at ~21 °C (thermal comfort).
 const COMFORT_TEMPS = [-5, 7, 21, 28, 38];
 
+// Bar positions (0..100 %) for those anchors. Deliberately non-linear: cold is
+// rare in Karlsruhe, so the cold end is compressed to sit "behaglich" (21 °C)
+// left of centre and give the everyday warm range more width. Colour per degree
+// is unchanged; only the horizontal placement is skewed.
+const COMFORT_POS = [0, 22, 45, 70, 100];
+
 // Qualitative comfort reference points (°C) for labelling the history y-axis.
 export const COMFORT_MARKS = [
     { temp: -5, label: "eisig" },
@@ -24,6 +30,21 @@ export const COMFORT_MARKS = [
 ];
 const COMFORT_MIN = COMFORT_TEMPS[0];
 const COMFORT_MAX = COMFORT_TEMPS[COMFORT_TEMPS.length - 1];
+
+// Temperature → 0..1 position along the skewed comfort bar (piecewise linear
+// between the anchor/position pairs above).
+function comfortFrac(temp) {
+    const t = Math.min(COMFORT_MAX, Math.max(COMFORT_MIN, temp));
+
+    for (let i = 1; i < COMFORT_TEMPS.length; i++) {
+        if (t <= COMFORT_TEMPS[i]) {
+            const local = (t - COMFORT_TEMPS[i - 1]) / (COMFORT_TEMPS[i] - COMFORT_TEMPS[i - 1]);
+            return (COMFORT_POS[i - 1] + local * (COMFORT_POS[i] - COMFORT_POS[i - 1])) / 100;
+        }
+    }
+
+    return 1;
+}
 
 export const COMFORT = "comfort";
 export const RELATIVE = "relative";
@@ -41,8 +62,7 @@ export function makeScale(mode, temps) {
 }
 
 function comfortScale() {
-    const span = COMFORT_MAX - COMFORT_MIN;
-    const frac = (t) => (Math.min(COMFORT_MAX, Math.max(COMFORT_MIN, t)) - COMFORT_MIN) / span;
+    const frac = comfortFrac;
 
     // Label the fixed bar with the qualitative comfort levels rather than bare
     // numbers, so a color reads as a felt temperature.
