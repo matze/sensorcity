@@ -452,17 +452,19 @@ a:hover {
     border-radius: 3px;
 }
 
-.heat-legend-scale {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.3rem;
+.heat-legend-ticks {
+    position: relative;
+    height: 0.9rem;
+    margin-top: 0.28rem;
+}
+
+.heat-legend-ticks span {
+    position: absolute;
+    transform: translateX(-50%);
     font-size: 0.72rem;
     font-variant-numeric: tabular-nums;
     color: var(--text-secondary);
-}
-
-.heat-legend-scale span:nth-child(2) {
-    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .toggle {

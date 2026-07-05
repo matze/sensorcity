@@ -1,9 +1,20 @@
 // Computed temperature heat map: inverse-distance-weighting interpolation over
 // the sensor points, painted onto a canvas overlay that tracks the Leaflet map.
 
-import { rampColor, rampGradientCss, tempFraction } from "./color.js";
+import { rampColor, rampGradientCss, TEMP_MIN, TEMP_MAX } from "./color.js";
 
-const legendFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
+// Tick temperatures for the legend: every 10 °C inside the fixed comfort domain.
+function legendTicks() {
+    const span = TEMP_MAX - TEMP_MIN;
+    const ticks = [];
+
+    for (let temp = Math.ceil(TEMP_MIN / 10) * 10; temp <= TEMP_MAX; temp += 10) {
+        const left = ((temp - TEMP_MIN) / span) * 100;
+        ticks.push(`<span style="left:${left.toFixed(1)}%">${temp}°</span>`);
+    }
+
+    return ticks.join("");
+}
 
 const CELL = 8;          // px per interpolation cell (coarse grid, upscaled)
 const POWER = 2;         // IDW distance exponent
@@ -29,39 +40,23 @@ export class HeatOverlay {
         this.legend.className = "heat-legend";
         this.legend.innerHTML =
             `<div class="heat-legend-bar" style="background:${rampGradientCss()}"></div>` +
-            '<div class="heat-legend-scale"><span></span><span></span><span></span></div>';
+            `<div class="heat-legend-ticks">${legendTicks()}</div>`;
 
         this.enabled = false;
     }
 
-    setData(sensors, min, max) {
+    setData(sensors) {
         this.sensors = sensors.filter((s) => s.lat != null && s.lon != null && s.temp != null);
-        this.min = min;
-        this.max = max;
-        this.renderLegend();
 
         if (this.enabled) {
             this.draw();
         }
     }
 
-    renderLegend() {
-        if (this.min == null || this.max == null) {
-            return;
-        }
-
-        const mid = (this.min + this.max) / 2;
-        const [lo, center, hi] = this.legend.querySelectorAll(".heat-legend-scale span");
-        lo.textContent = `${legendFmt.format(this.min)} °C`;
-        center.textContent = `${legendFmt.format(mid)} °C`;
-        hi.textContent = `${legendFmt.format(this.max)} °C`;
-    }
-
     enable() {
         this.enabled = true;
         this.map.getPanes().overlayPane.appendChild(this.canvas);
         this.map.getContainer().appendChild(this.legend);
-        this.renderLegend();
         this.draw();
     }
 
@@ -106,7 +101,7 @@ export class HeatOverlay {
                     continue;
                 }
 
-                const [r, g, b] = rampColor(tempFraction(value, this.min, this.max));
+                const [r, g, b] = rampColor(value);
                 image.data[index] = r;
                 image.data[index + 1] = g;
                 image.data[index + 2] = b;

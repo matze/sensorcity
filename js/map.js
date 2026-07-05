@@ -29,7 +29,7 @@ export class SensorMap {
         return this.map;
     }
 
-    setSensors(sensors, min, max) {
+    setSensors(sensors) {
         this.markers.forEach((entry) => entry.marker.remove());
         this.markers.clear();
 
@@ -37,7 +37,7 @@ export class SensorMap {
 
         located.forEach((sensor) => {
             const marker = L.marker([sensor.lat, sensor.lon], {
-                icon: this.icon(sensor, min, max, false),
+                icon: this.icon(sensor, false),
                 title: sensor.name,
             });
 
@@ -50,13 +50,10 @@ export class SensorMap {
             this.map.fitBounds(located.map((s) => [s.lat, s.lon]), { padding: [30, 30] });
             this.fitted = true;
         }
-
-        this.min = min;
-        this.max = max;
     }
 
-    icon(sensor, min, max, selected) {
-        const color = tempColor(sensor.temp, min, max);
+    icon(sensor, selected) {
+        const color = tempColor(sensor.temp);
         return L.divIcon({
             className: "",
             html: `<div class="marker-dot${selected ? " selected" : ""}" style="background:${color}"></div>`,
@@ -67,7 +64,7 @@ export class SensorMap {
 
     highlight(key) {
         this.markers.forEach((entry, entryKey) => {
-            entry.marker.setIcon(this.icon(entry.sensor, this.min, this.max, entryKey === key));
+            entry.marker.setIcon(this.icon(entry.sensor, entryKey === key));
         });
 
         const active = this.markers.get(key);

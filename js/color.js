@@ -1,31 +1,38 @@
-// Shared temperature color scale used by the list swatches, map markers and the
-// heat-map overlay so every surface reads the same cold→hot mapping.
+// Shared temperature color scale for the list swatches, map markers, history
+// chart and heat map, so every surface reads one cold→hot mapping.
 //
-// A diverging thermal ramp: cold blues, a light neutral pivot, warm reds. Stops
-// are interpolated in sRGB against a data-driven [min, max] domain.
+// Comfort-calibrated and absolute: color is keyed to real air temperature with
+// ~21 °C (thermal comfort) at the neutral pivot, cool blues below and warm reds
+// above. The domain is fixed, so a given color always means the same temperature
+// — comparable across days and seasons — rather than stretched to each moment's
+// spread.
 
 const STOPS = [
-    [0.0, [42, 92, 171]],   // deep blue  – coldest
-    [0.25, [86, 152, 231]], // blue
-    [0.5, [235, 234, 228]], // light neutral pivot
-    [0.72, [235, 104, 52]], // orange
-    [1.0, [208, 59, 59]],   // red        – hottest
+    [-5, [42, 92, 171]],   // bitter cold  – deep blue
+    [7, [86, 152, 231]],   // cold         – blue
+    [21, [235, 234, 228]], // comfortable  – light neutral pivot
+    [28, [235, 104, 52]],  // warm         – orange
+    [38, [208, 59, 59]],   // heat         – red
 ];
+
+export const TEMP_MIN = STOPS[0][0];
+export const TEMP_MAX = STOPS[STOPS.length - 1][0];
 
 function lerp(a, b, t) {
     return Math.round(a + (b - a) * t);
 }
 
-// Map a fraction in [0, 1] to an "r,g,b" tuple along the ramp.
-export function rampColor(fraction) {
-    const f = Math.min(1, Math.max(0, fraction));
+// Absolute air temperature (°C) → an [r, g, b] tuple along the ramp, clamped to
+// the fixed domain.
+export function rampColor(tempCelsius) {
+    const t = Math.min(TEMP_MAX, Math.max(TEMP_MIN, tempCelsius));
 
     for (let i = 1; i < STOPS.length; i++) {
         const [pos, rgb] = STOPS[i];
 
-        if (f <= pos) {
+        if (t <= pos) {
             const [prevPos, prevRgb] = STOPS[i - 1];
-            const local = (f - prevPos) / (pos - prevPos);
+            const local = (t - prevPos) / (pos - prevPos);
             return [
                 lerp(prevRgb[0], rgb[0], local),
                 lerp(prevRgb[1], rgb[1], local),
@@ -37,23 +44,16 @@ export function rampColor(fraction) {
     return STOPS[STOPS.length - 1][1];
 }
 
-// CSS `linear-gradient` tracing the full ramp, for the heat-map legend.
+// CSS `linear-gradient` tracing the ramp across the fixed domain, for the legend.
 export function rampGradientCss(direction = "to right") {
-    const stops = STOPS.map(([pos, [r, g, b]]) => `rgb(${r}, ${g}, ${b}) ${Math.round(pos * 100)}%`);
+    const span = TEMP_MAX - TEMP_MIN;
+    const stops = STOPS.map(([temp, [r, g, b]]) =>
+        `rgb(${r}, ${g}, ${b}) ${Math.round(((temp - TEMP_MIN) / span) * 100)}%`);
     return `linear-gradient(${direction}, ${stops.join(", ")})`;
 }
 
-// Fraction of `temp` within [min, max]; a flat domain maps everything to center.
-export function tempFraction(temp, min, max) {
-    if (max - min < 0.001) {
-        return 0.5;
-    }
-
-    return (temp - min) / (max - min);
-}
-
-export function tempColor(temp, min, max) {
-    const [r, g, b] = rampColor(tempFraction(temp, min, max));
+export function tempColor(tempCelsius) {
+    const [r, g, b] = rampColor(tempCelsius);
     return `rgb(${r}, ${g}, ${b})`;
 }
 

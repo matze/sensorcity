@@ -24,8 +24,6 @@ const state = {
     byKey: new Map(),
     selectedKey: null,
     rangeDays: 7,
-    tempMin: 0,
-    tempMax: 1,
 };
 
 const chart = new Chart(document.getElementById("chart"));
@@ -68,7 +66,7 @@ function renderList(filter = "") {
             item.classList.add("stale");
         }
 
-        const color = tempColor(sensor.temp, state.tempMin, state.tempMax);
+        const color = tempColor(sensor.temp);
         item.innerHTML = `
             <span class="sensor-swatch" style="background:${color}"></span>
             <span class="sensor-name" title="${sensor.name}">${sensor.key}</span>
@@ -99,7 +97,7 @@ function updateListSelection() {
 
 function renderDetail(sensor) {
     const stale = isStale(sensor);
-    const color = tempColor(sensor.temp, state.tempMin, state.tempMax);
+    const color = tempColor(sensor.temp);
 
     dom.detail.classList.toggle("stale", stale);
     dom.detail.innerHTML = `
@@ -168,7 +166,7 @@ async function loadHistory(sensor) {
             return; // selection changed while loading
         }
 
-        chart.render(points, tempColor(sensor.temp, state.tempMin, state.tempMax));
+        chart.render(points, tempColor(sensor.temp));
     } catch (error) {
         chart.showMessage(`Verlauf nicht verfügbar (${error.message}).`);
     }
@@ -182,16 +180,9 @@ async function loadSensors() {
     state.sensors = sensors;
     state.byKey = new Map(sensors.map((sensor) => [sensor.key, sensor]));
 
-    // Robust color domain: clip to the 5th–95th percentile so a couple of hot or
-    // cold outliers don't compress the whole cluster into one end of the ramp.
-    const temps = sensors.map((sensor) => sensor.temp).sort((a, b) => a - b);
-    const percentile = (p) => temps[Math.min(temps.length - 1, Math.floor(p * (temps.length - 1)))];
-    state.tempMin = percentile(0.05);
-    state.tempMax = percentile(0.95);
-
     renderList(dom.search.value);
-    sensorMap.setSensors(sensors, state.tempMin, state.tempMax);
-    heatOverlay.setData(sensors, state.tempMin, state.tempMax);
+    sensorMap.setSensors(sensors);
+    heatOverlay.setData(sensors);
 }
 
 async function refresh({ initial = false } = {}) {
