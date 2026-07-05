@@ -426,9 +426,43 @@ a:hover {
 /* ---------- Map ---------- */
 
 .map {
+    position: relative;
     height: 420px;
     width: 100%;
     background: var(--surface-2);
+}
+
+.heat-legend {
+    position: absolute;
+    right: 10px;
+    bottom: 22px;
+    z-index: 500;
+    width: 168px;
+    padding: 0.5rem 0.6rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(4px);
+    box-shadow: var(--shadow);
+    pointer-events: none;
+}
+
+.heat-legend-bar {
+    height: 10px;
+    border-radius: 3px;
+}
+
+.heat-legend-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+}
+
+.heat-legend-scale span:nth-child(2) {
+    color: var(--text-muted);
 }
 
 .toggle {

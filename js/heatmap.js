@@ -1,7 +1,9 @@
 // Computed temperature heat map: inverse-distance-weighting interpolation over
 // the sensor points, painted onto a canvas overlay that tracks the Leaflet map.
 
-import { rampColor, tempFraction } from "./color.js";
+import { rampColor, rampGradientCss, tempFraction } from "./color.js";
+
+const legendFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
 const CELL = 8;          // px per interpolation cell (coarse grid, upscaled)
 const POWER = 2;         // IDW distance exponent
@@ -23,6 +25,12 @@ export class HeatOverlay {
             opacity: 0.72,
         });
 
+        this.legend = document.createElement("div");
+        this.legend.className = "heat-legend";
+        this.legend.innerHTML =
+            `<div class="heat-legend-bar" style="background:${rampGradientCss()}"></div>` +
+            '<div class="heat-legend-scale"><span></span><span></span><span></span></div>';
+
         this.enabled = false;
     }
 
@@ -30,21 +38,37 @@ export class HeatOverlay {
         this.sensors = sensors.filter((s) => s.lat != null && s.lon != null && s.temp != null);
         this.min = min;
         this.max = max;
+        this.renderLegend();
 
         if (this.enabled) {
             this.draw();
         }
     }
 
+    renderLegend() {
+        if (this.min == null || this.max == null) {
+            return;
+        }
+
+        const mid = (this.min + this.max) / 2;
+        const [lo, center, hi] = this.legend.querySelectorAll(".heat-legend-scale span");
+        lo.textContent = `${legendFmt.format(this.min)} °C`;
+        center.textContent = `${legendFmt.format(mid)} °C`;
+        hi.textContent = `${legendFmt.format(this.max)} °C`;
+    }
+
     enable() {
         this.enabled = true;
         this.map.getPanes().overlayPane.appendChild(this.canvas);
+        this.map.getContainer().appendChild(this.legend);
+        this.renderLegend();
         this.draw();
     }
 
     disable() {
         this.enabled = false;
         this.canvas.remove();
+        this.legend.remove();
     }
 
     // Reposition + repaint after the map moves; the canvas covers the viewport.

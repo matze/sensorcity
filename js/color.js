@@ -37,6 +37,12 @@ export function rampColor(fraction) {
     return STOPS[STOPS.length - 1][1];
 }
 
+// CSS `linear-gradient` tracing the full ramp, for the heat-map legend.
+export function rampGradientCss(direction = "to right") {
+    const stops = STOPS.map(([pos, [r, g, b]]) => `rgb(${r}, ${g}, ${b}) ${Math.round(pos * 100)}%`);
+    return `linear-gradient(${direction}, ${stops.join(", ")})`;
+}
+
 // Fraction of `temp` within [min, max]; a flat domain maps everything to center.
 export function tempFraction(temp, min, max) {
     if (max - min < 0.001) {
