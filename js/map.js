@@ -2,7 +2,7 @@
 // temperature scale; clicking one selects it. Uses the global `L` from the
 // vendored Leaflet script.
 
-import { tempColor } from "./color.js";
+import { makeScale, COMFORT } from "./scale.js";
 
 const KARLSRUHE = [49.0069, 8.4037];
 const FOCUS_ZOOM = 15;
@@ -11,6 +11,8 @@ export class SensorMap {
     constructor(containerId, onSelect) {
         this.onSelect = onSelect;
         this.markers = new Map();
+        this.scale = makeScale(COMFORT, []);
+        this.selectedKey = null;
 
         this.map = L.map(containerId, { zoomControl: true }).setView(KARLSRUHE, 12);
 
@@ -29,7 +31,8 @@ export class SensorMap {
         return this.map;
     }
 
-    setSensors(sensors) {
+    setSensors(sensors, scale) {
+        this.scale = scale;
         this.markers.forEach((entry) => entry.marker.remove());
         this.markers.clear();
 
@@ -37,7 +40,7 @@ export class SensorMap {
 
         located.forEach((sensor) => {
             const marker = L.marker([sensor.lat, sensor.lon], {
-                icon: this.icon(sensor, false),
+                icon: this.icon(sensor, sensor.key === this.selectedKey),
                 title: sensor.name,
             });
 
@@ -52,8 +55,16 @@ export class SensorMap {
         }
     }
 
+    // Recolor existing markers after a scale-mode switch, without refetching.
+    applyScale(scale) {
+        this.scale = scale;
+        this.markers.forEach((entry, key) => {
+            entry.marker.setIcon(this.icon(entry.sensor, key === this.selectedKey));
+        });
+    }
+
     icon(sensor, selected) {
-        const color = tempColor(sensor.temp);
+        const color = this.scale.color(sensor.temp);
         return L.divIcon({
             className: "",
             html: `<div class="marker-dot${selected ? " selected" : ""}" style="background:${color}"></div>`,
@@ -63,6 +74,7 @@ export class SensorMap {
     }
 
     highlight(key) {
+        this.selectedKey = key;
         this.markers.forEach((entry, entryKey) => {
             entry.marker.setIcon(this.icon(entry.sensor, entryKey === key));
         });

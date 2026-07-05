@@ -36,7 +36,8 @@ function niceStep(span, targetTicks) {
 export class Chart {
     constructor(container) {
         this.container = container;
-        this.color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2a78d6";
+        const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2a78d6";
+        this.colorFor = () => accent;
     }
 
     showLoading() {
@@ -48,8 +49,8 @@ export class Chart {
         this.container.innerHTML = `<div class="chart-empty">${text}</div>`;
     }
 
-    render(points, color) {
-        this.color = color || this.color;
+    render(points, colorFor) {
+        this.colorFor = colorFor || this.colorFor;
 
         if (!points || points.length < 2) {
             this.showMessage("Keine Verlaufsdaten für diesen Zeitraum.");
@@ -79,7 +80,7 @@ export class Chart {
         this.drawLine(svg, points);
 
         this.crosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
-        this.marker = el("circle", { r: 4, fill: this.color, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 });
+        this.marker = el("circle", { r: 4, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 });
         svg.append(this.crosshair, this.marker);
 
         this.container.innerHTML = "";
@@ -128,16 +129,21 @@ export class Chart {
         }
     }
 
+    // One short path per interval, each stroked by the interval's mean
+    // temperature, so the line itself reads the color scale over time.
     drawLine(svg, points) {
-        const d = points
-            .map((p, i) => `${i === 0 ? "M" : "L"}${this.x(p.time.getTime()).toFixed(1)} ${this.y(p.temp).toFixed(1)}`)
-            .join(" ");
-        svg.append(el("path", { class: "series-line", d, stroke: this.color }));
+        for (let i = 1; i < points.length; i++) {
+            const a = points[i - 1];
+            const b = points[i];
+            const d = `M${this.x(a.time.getTime()).toFixed(1)} ${this.y(a.temp).toFixed(1)}`
+                + ` L${this.x(b.time.getTime()).toFixed(1)} ${this.y(b.temp).toFixed(1)}`;
+            svg.append(el("path", { class: "series-line", d, stroke: this.colorFor((a.temp + b.temp) / 2) }));
+        }
 
         const last = points[points.length - 1];
         svg.append(el("circle", {
             cx: this.x(last.time.getTime()), cy: this.y(last.temp), r: 4,
-            fill: this.color, stroke: "var(--surface)", "stroke-width": 2,
+            fill: this.colorFor(last.temp), stroke: "var(--surface)", "stroke-width": 2,
         }));
     }
 
@@ -158,6 +164,7 @@ export class Chart {
             this.crosshair.setAttribute("opacity", 1);
             this.marker.setAttribute("cx", px);
             this.marker.setAttribute("cy", py);
+            this.marker.setAttribute("fill", this.colorFor(nearest.temp));
             this.marker.setAttribute("opacity", 1);
 
             this.tooltip.innerHTML =

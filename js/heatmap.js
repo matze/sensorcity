@@ -1,36 +1,15 @@
 // Computed temperature heat map: inverse-distance-weighting interpolation over
 // the sensor points, painted onto a canvas overlay that tracks the Leaflet map.
 
-import { rampColor, rampGradientCss, TEMP_MIN, TEMP_MAX } from "./color.js";
-
-const legendFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
-
-// Fraction (0–1) of a temperature within the fixed comfort domain, clamped.
-function domainFraction(temp) {
-    return (Math.min(TEMP_MAX, Math.max(TEMP_MIN, temp)) - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
-}
-
-// Tick temperatures for the legend: every 10 °C inside the fixed comfort domain.
-function legendTicks() {
-    const span = TEMP_MAX - TEMP_MIN;
-    const ticks = [];
-
-    for (let temp = Math.ceil(TEMP_MIN / 10) * 10; temp <= TEMP_MAX; temp += 10) {
-        const left = ((temp - TEMP_MIN) / span) * 100;
-        ticks.push(`<span style="left:${left.toFixed(1)}%">${temp}°</span>`);
-    }
-
-    return ticks.join("");
-}
-
 const CELL = 8;          // px per interpolation cell (coarse grid, upscaled)
 const POWER = 2;         // IDW distance exponent
 const MAX_DIST = 260;    // px beyond which a sensor stops contributing
 const ALPHA = 150;       // overlay opacity (0–255)
 
 export class HeatOverlay {
-    constructor(map) {
+    constructor(map, scale) {
         this.map = map;
+        this.scale = scale;
         this.sensors = [];
 
         this.canvas = document.createElement("canvas");
@@ -43,61 +22,36 @@ export class HeatOverlay {
             opacity: 0.72,
         });
 
-        this.legend = document.createElement("div");
-        this.legend.className = "heat-legend";
-        this.legend.innerHTML =
-            `<div class="heat-legend-bar" style="background:${rampGradientCss()}">` +
-            '<div class="heat-legend-now" hidden></div></div>' +
-            `<div class="heat-legend-ticks">${legendTicks()}</div>` +
-            '<div class="heat-legend-caption"></div>';
-
         this.enabled = false;
     }
 
-    setData(sensors) {
+    setData(sensors, scale) {
+        this.scale = scale;
         this.sensors = sensors.filter((s) => s.lat != null && s.lon != null && s.temp != null);
-        this.renderNowMarker();
 
         if (this.enabled) {
             this.draw();
         }
     }
 
-    // Mark the span of the current readings on the fixed scale, so the legend
-    // shows where "now" sits within the whole comfort range.
-    renderNowMarker() {
-        const marker = this.legend.querySelector(".heat-legend-now");
-        const caption = this.legend.querySelector(".heat-legend-caption");
-        const temps = this.sensors.map((s) => s.temp);
+    // Recolor the overlay after a scale-mode switch, without new data.
+    applyScale(scale) {
+        this.scale = scale;
 
-        if (temps.length === 0) {
-            marker.hidden = true;
-            caption.textContent = "";
-            return;
+        if (this.enabled) {
+            this.draw();
         }
-
-        const low = Math.min(...temps);
-        const high = Math.max(...temps);
-        const left = domainFraction(low) * 100;
-        const width = (domainFraction(high) - domainFraction(low)) * 100;
-
-        marker.hidden = false;
-        marker.style.left = `${left.toFixed(1)}%`;
-        marker.style.width = `${width.toFixed(1)}%`;
-        caption.textContent = `jetzt ${legendFmt.format(low)}–${legendFmt.format(high)} °C`;
     }
 
     enable() {
         this.enabled = true;
         this.map.getPanes().overlayPane.appendChild(this.canvas);
-        this.map.getContainer().appendChild(this.legend);
         this.draw();
     }
 
     disable() {
         this.enabled = false;
         this.canvas.remove();
-        this.legend.remove();
     }
 
     // Reposition + repaint after the map moves; the canvas covers the viewport.
@@ -135,7 +89,7 @@ export class HeatOverlay {
                     continue;
                 }
 
-                const [r, g, b] = rampColor(value);
+                const [r, g, b] = this.scale.rgb(value);
                 image.data[index] = r;
                 image.data[index + 1] = g;
                 image.data[index + 2] = b;

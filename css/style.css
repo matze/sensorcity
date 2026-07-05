@@ -432,28 +432,26 @@ a:hover {
     background: var(--surface-2);
 }
 
-.heat-legend {
-    position: absolute;
-    right: 10px;
-    bottom: 22px;
-    z-index: 500;
-    width: 168px;
-    padding: 0.5rem 0.6rem 0.55rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
-    backdrop-filter: blur(4px);
-    box-shadow: var(--shadow);
-    pointer-events: none;
+.map-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.9rem;
 }
 
-.heat-legend-bar {
+/* Always-visible scale below the map, explaining the marker/list/heat colors. */
+.scale-legend {
+    padding: 0.7rem 1rem 0.8rem;
+    border-top: 1px solid var(--border);
+}
+
+.scale-legend-bar {
     position: relative;
     height: 10px;
     border-radius: 3px;
 }
 
-.heat-legend-now {
+.scale-legend-now {
     position: absolute;
     top: -3px;
     height: 16px;
@@ -464,13 +462,13 @@ a:hover {
     box-shadow: 0 0 0 1.5px var(--text-primary);
 }
 
-.heat-legend-ticks {
+.scale-legend-ticks {
     position: relative;
     height: 0.9rem;
-    margin-top: 0.28rem;
+    margin-top: 0.3rem;
 }
 
-.heat-legend-ticks span {
+.scale-legend-ticks span {
     position: absolute;
     transform: translateX(-50%);
     font-size: 0.72rem;
@@ -479,12 +477,13 @@ a:hover {
     white-space: nowrap;
 }
 
-.heat-legend-caption {
-    margin-top: 0.15rem;
+.scale-legend-caption {
+    margin-top: 0.1rem;
     text-align: center;
     font-size: 0.72rem;
     font-variant-numeric: tabular-nums;
-    color: var(--text-secondary);
+    color: var(--text-muted);
+    min-height: 0.9rem;
 }
 
 .toggle {
@@ -596,7 +595,8 @@ a:hover {
     transition: opacity 0.1s;
 }
 
-.range-controls {
+.range-controls,
+.segmented {
     display: inline-flex;
     gap: 2px;
     background: var(--surface-2);
@@ -604,7 +604,8 @@ a:hover {
     padding: 2px;
 }
 
-.range-controls button {
+.range-controls button,
+.segmented button {
     font: inherit;
     font-size: 0.82rem;
     white-space: nowrap;
@@ -616,7 +617,8 @@ a:hover {
     cursor: pointer;
 }
 
-.range-controls button.active {
+.range-controls button.active,
+.segmented button.active {
     background: var(--surface);
     color: var(--text-primary);
     box-shadow: var(--shadow);

@@ -2,7 +2,7 @@
 // history chart, and keeps the selection in sync with the URL.
 
 import { fetchSensors, fetchHistory, STALE_AFTER_MS } from "./api.js";
-import { tempColor } from "./color.js";
+import { makeScale, COMFORT } from "./scale.js";
 import { selectedKeyFromUrl, writeSelectedToUrl, onUrlChange } from "./state.js";
 import { SensorMap } from "./map.js";
 import { HeatOverlay } from "./heatmap.js";
@@ -17,6 +17,8 @@ const dom = {
     detail: document.getElementById("detail"),
     heatmapToggle: document.getElementById("heatmapToggle"),
     rangeControls: document.getElementById("rangeControls"),
+    scaleMode: document.getElementById("scaleMode"),
+    legend: document.getElementById("scaleLegend"),
 };
 
 const state = {
@@ -24,11 +26,17 @@ const state = {
     byKey: new Map(),
     selectedKey: null,
     rangeDays: 7,
+    scaleMode: COMFORT,
+    historyPoints: null,
 };
 
 const chart = new Chart(document.getElementById("chart"));
 let sensorMap;
 let heatOverlay;
+
+// The scale over the whole network, driving list swatches, map markers, the heat
+// map and the legend. The chart builds its own scale over one series.
+let networkScale = makeScale(COMFORT, []);
 
 const numberFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
@@ -66,7 +74,7 @@ function renderList(filter = "") {
             item.classList.add("stale");
         }
 
-        const color = tempColor(sensor.temp);
+        const color = networkScale.color(sensor.temp);
         item.innerHTML = `
             <span class="sensor-swatch" style="background:${color}"></span>
             <span class="sensor-name" title="${sensor.name}">${sensor.key}</span>
@@ -97,7 +105,7 @@ function updateListSelection() {
 
 function renderDetail(sensor) {
     const stale = isStale(sensor);
-    const color = tempColor(sensor.temp);
+    const color = networkScale.color(sensor.temp);
 
     dom.detail.classList.toggle("stale", stale);
     dom.detail.innerHTML = `
@@ -158,6 +166,7 @@ async function select(key, { fromUrl = false } = {}) {
 
 async function loadHistory(sensor) {
     chart.showLoading();
+    state.historyPoints = null;
 
     try {
         const points = await fetchHistory(sensor.deviceId, state.rangeDays);
@@ -166,10 +175,22 @@ async function loadHistory(sensor) {
             return; // selection changed while loading
         }
 
-        chart.render(points, tempColor(sensor.temp));
+        state.historyPoints = points;
+        renderChart();
     } catch (error) {
         chart.showMessage(`Verlauf nicht verfügbar (${error.message}).`);
     }
+}
+
+// Color the history line by the active mode, over the series' own range in
+// relative mode so a single day still shows contrast.
+function renderChart() {
+    if (!state.historyPoints) {
+        return;
+    }
+
+    const scale = makeScale(state.scaleMode, state.historyPoints.map((point) => point.temp));
+    chart.render(state.historyPoints, scale.color);
 }
 
 // ---------- Data loading ----------
@@ -180,9 +201,56 @@ async function loadSensors() {
     state.sensors = sensors;
     state.byKey = new Map(sensors.map((sensor) => [sensor.key, sensor]));
 
+    networkScale = makeScale(state.scaleMode, sensors.map((sensor) => sensor.temp));
+
     renderList(dom.search.value);
-    sensorMap.setSensors(sensors);
-    heatOverlay.setData(sensors);
+    sensorMap.setSensors(sensors, networkScale);
+    heatOverlay.setData(sensors, networkScale);
+    renderLegend();
+}
+
+// The always-visible scale below the map: gradient, ticks, and (comfort mode)
+// a bracket showing where the current readings fall within the fixed range.
+function renderLegend() {
+    const ticks = networkScale.ticks()
+        .map((tick) => {
+            const shift = tick.pos <= 0 ? "0" : tick.pos >= 100 ? "-100%" : "-50%";
+            return `<span style="left:${tick.pos.toFixed(1)}%;transform:translateX(${shift})">${tick.label}</span>`;
+        })
+        .join("");
+    const now = networkScale.nowSpan(state.sensors.map((sensor) => sensor.temp));
+    const marker = now
+        ? `<div class="scale-legend-now" style="left:${now.left.toFixed(1)}%;width:${now.width.toFixed(1)}%"></div>`
+        : "";
+    const caption = now ? now.label : "";
+
+    dom.legend.innerHTML =
+        `<div class="scale-legend-bar" style="background:${networkScale.gradientCss()}">${marker}</div>`
+        + `<div class="scale-legend-ticks">${ticks}</div>`
+        + `<div class="scale-legend-caption">${caption}</div>`;
+}
+
+function setScaleMode(mode) {
+    if (mode === state.scaleMode) {
+        return;
+    }
+
+    state.scaleMode = mode;
+    dom.scaleMode.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
+
+    networkScale = makeScale(mode, state.sensors.map((sensor) => sensor.temp));
+    renderList(dom.search.value);
+
+    const selected = state.byKey.get(state.selectedKey);
+
+    if (selected) {
+        renderDetail(selected);
+    }
+
+    sensorMap.applyScale(networkScale);
+    heatOverlay.applyScale(networkScale);
+    renderLegend();
+    renderChart();
 }
 
 async function refresh({ initial = false } = {}) {
@@ -218,10 +286,20 @@ async function refresh({ initial = false } = {}) {
 
 function init() {
     sensorMap = new SensorMap("map", (key) => select(key));
-    heatOverlay = new HeatOverlay(sensorMap.instance);
+    heatOverlay = new HeatOverlay(sensorMap.instance, networkScale);
     sensorMap.onViewChange(() => heatOverlay.draw());
 
+    renderLegend();
+
     dom.search.addEventListener("input", () => renderList(dom.search.value));
+
+    dom.scaleMode.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-mode]");
+
+        if (button) {
+            setScaleMode(button.dataset.mode);
+        }
+    });
 
     dom.heatmapToggle.addEventListener("change", () => {
         dom.heatmapToggle.checked ? heatOverlay.enable() : heatOverlay.disable();

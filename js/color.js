@@ -1,64 +1,45 @@
-// Shared temperature color scale for the list swatches, map markers, history
-// chart and heat map, so every surface reads one cold→hot mapping.
-//
-// Comfort-calibrated and absolute: color is keyed to real air temperature with
-// ~21 °C (thermal comfort) at the neutral pivot, cool blues below and warm reds
-// above. The domain is fixed, so a given color always means the same temperature
-// — comparable across days and seasons — rather than stretched to each moment's
-// spread.
+// Low-level thermal ramp shared by every temperature scale (see scale.js): five
+// RGB stops going cold blue → light neutral pivot → warm red. Higher layers pin
+// these stops to either absolute degrees (comfort) or a data range (relative).
 
-const STOPS = [
-    [-5, [42, 92, 171]],   // bitter cold  – deep blue
-    [7, [86, 152, 231]],   // cold         – blue
-    [21, [235, 234, 228]], // comfortable  – light neutral pivot
-    [28, [235, 104, 52]],  // warm         – orange
-    [38, [208, 59, 59]],   // heat         – red
+const COLORS = [
+    [42, 92, 171],   // deep blue    – coldest
+    [86, 152, 231],  // blue
+    [235, 234, 228], // light neutral pivot
+    [235, 104, 52],  // orange
+    [208, 59, 59],   // red          – hottest
 ];
 
-export const TEMP_MIN = STOPS[0][0];
-export const TEMP_MAX = STOPS[STOPS.length - 1][0];
+// Even-ish stop positions (0..1) for a data-relative diverging ramp.
+export const FRACTIONS = [0, 0.25, 0.5, 0.72, 1.0];
 
 function lerp(a, b, t) {
     return Math.round(a + (b - a) * t);
 }
 
-// Absolute air temperature (°C) → an [r, g, b] tuple along the ramp, clamped to
-// the fixed domain.
-export function rampColor(tempCelsius) {
-    const t = Math.min(TEMP_MAX, Math.max(TEMP_MIN, tempCelsius));
+// Interpolate the shared COLORS against `positions` (same length) at `value`,
+// clamped to the endpoints. `positions` may be fractions or absolute degrees.
+export function interpolate(positions, value) {
+    const v = Math.min(positions[positions.length - 1], Math.max(positions[0], value));
 
-    for (let i = 1; i < STOPS.length; i++) {
-        const [pos, rgb] = STOPS[i];
-
-        if (t <= pos) {
-            const [prevPos, prevRgb] = STOPS[i - 1];
-            const local = (t - prevPos) / (pos - prevPos);
-            return [
-                lerp(prevRgb[0], rgb[0], local),
-                lerp(prevRgb[1], rgb[1], local),
-                lerp(prevRgb[2], rgb[2], local),
-            ];
+    for (let i = 1; i < positions.length; i++) {
+        if (v <= positions[i]) {
+            const local = (v - positions[i - 1]) / (positions[i] - positions[i - 1]);
+            const [ar, ag, ab] = COLORS[i - 1];
+            const [br, bg, bb] = COLORS[i];
+            return [lerp(ar, br, local), lerp(ag, bg, local), lerp(ab, bb, local)];
         }
     }
 
-    return STOPS[STOPS.length - 1][1];
+    return COLORS[COLORS.length - 1];
 }
 
-// CSS `linear-gradient` tracing the ramp across the fixed domain, for the legend.
-export function rampGradientCss(direction = "to right") {
-    const span = TEMP_MAX - TEMP_MIN;
-    const stops = STOPS.map(([temp, [r, g, b]]) =>
-        `rgb(${r}, ${g}, ${b}) ${Math.round(((temp - TEMP_MIN) / span) * 100)}%`);
-    return `linear-gradient(${direction}, ${stops.join(", ")})`;
-}
-
-export function tempColor(tempCelsius) {
-    const [r, g, b] = rampColor(tempCelsius);
+export function rgbString([r, g, b]) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Pick readable ink (dark/light) for text laid over a ramp color.
-export function inkOn([r, g, b]) {
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? "#0b0b0b" : "#ffffff";
+// CSS `linear-gradient` from `[offsetPercent, rgbTuple]` stops.
+export function gradientCss(stops, direction = "to right") {
+    const parts = stops.map(([pct, rgb]) => `${rgbString(rgb)} ${pct}%`);
+    return `linear-gradient(${direction}, ${parts.join(", ")})`;
 }
