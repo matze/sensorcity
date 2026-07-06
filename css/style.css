@@ -730,6 +730,13 @@ a:hover {
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+
+.range-controls button:hover:not(.active),
+.segmented button:hover:not(.active) {
+    background: var(--surface);
+    color: var(--text-primary);
 }
 
 .range-controls button.active,
