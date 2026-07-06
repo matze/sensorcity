@@ -12,7 +12,8 @@ computed heat map.
 Karlsruhe's public ArcGIS FeatureServer
 (`geoportal.karlsruhe.de/ags04/.../Sensordaten_NodeRED/FeatureServer`):
 layer `1` for the latest reading per sensor, layer `2` for hourly history. See
-`js/api.js`.
+`js/api.js`. The official data visualization page can be found
+[here](https://geoportal.karlsruhe.de/sensorcity/Dashboard/?page=Seite&amp;views=Temperatur).
 
 ## Develop
 
