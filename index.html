@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Karlsruhe SensorCity</title>
     <meta name="description" content="Aktuelle Wetterdaten aus dem Sensornetz der Stadt Karlsruhe – schnell und übersichtlich.">
+    <link rel="preconnect" href="https://geoportal.karlsruhe.de">
+    <link rel="modulepreload" href="js/app.js">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌡️</text></svg>">
@@ -89,7 +91,7 @@
         <a href="https://geoportal.karlsruhe.de/sensorcity/Dashboard/?page=Seite&amp;views=Temperatur">Offizielles Portal</a>
     </footer>
 
-    <script src="vendor/leaflet/leaflet.js"></script>
+    <script defer src="vendor/leaflet/leaflet.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
