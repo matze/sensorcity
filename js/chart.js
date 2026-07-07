@@ -106,9 +106,10 @@ export class Chart {
 
         this.drawLine(svg, points);
 
-        this.crosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
+        this.vCrosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
+        this.hCrosshair = el("line", { class: "chart-crosshair", x1: MARGIN.left, x2: MARGIN.left + PLOT_W, opacity: 0 });
         this.marker = el("circle", { r: 4, stroke: "var(--surface)", "stroke-width": 2, opacity: 0 });
-        svg.append(this.crosshair, this.marker);
+        svg.append(this.vCrosshair, this.hCrosshair, this.marker);
 
         this.container.innerHTML = "";
         this.container.append(svg);
@@ -229,9 +230,12 @@ export class Chart {
             const point = this.nearest(this.points, time);
             const px = this.x(point.time.getTime());
             const py = this.y(point.value);
-            this.crosshair.setAttribute("x1", px);
-            this.crosshair.setAttribute("x2", px);
-            this.crosshair.setAttribute("opacity", 1);
+            this.vCrosshair.setAttribute("x1", px);
+            this.vCrosshair.setAttribute("x2", px);
+            this.vCrosshair.setAttribute("opacity", 1);
+            this.hCrosshair.setAttribute("y1", py);
+            this.hCrosshair.setAttribute("y2", py);
+            this.hCrosshair.setAttribute("opacity", 1);
             this.marker.setAttribute("cx", px);
             this.marker.setAttribute("cy", py);
             this.marker.setAttribute("fill", this.colorFor(point.value));
@@ -249,7 +253,8 @@ export class Chart {
         };
 
         const hide = () => {
-            this.crosshair.setAttribute("opacity", 0);
+            this.vCrosshair.setAttribute("opacity", 0);
+            this.hCrosshair.setAttribute("opacity", 0);
             this.marker.setAttribute("opacity", 0);
             this.tooltip.style.opacity = 0;
         };
