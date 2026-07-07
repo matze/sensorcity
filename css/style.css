@@ -587,15 +587,19 @@ a:hover {
 }
 
 .chart .comfort-tick {
-    stroke: var(--axis);
+    stroke: var(--text-muted);
     stroke-width: 1;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 .chart .comfort-line {
-    stroke: var(--axis);
+    stroke: var(--text-muted);
     stroke-width: 1;
     stroke-dasharray: 2 4;
     opacity: 0.6;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 /* The chart SVG scales with the viewBox, so its text shrinks on narrow
@@ -623,11 +627,15 @@ a:hover {
 .chart .grid-line {
     stroke: var(--gridline);
     stroke-width: 1;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 .chart .axis-line {
     stroke: var(--axis);
     stroke-width: 1;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 .chart .series-line {
@@ -692,6 +700,8 @@ a:hover {
     stroke: var(--axis);
     stroke-width: 1;
     stroke-dasharray: 3 3;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 .chart-tooltip {

@@ -114,6 +114,12 @@ export class Chart {
         this.container.innerHTML = "";
         this.container.append(svg);
 
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = Math.round(svg.getBoundingClientRect().width * dpr) / dpr;
+        const aspect = VIEW_W / VIEW_H;
+        svg.style.width = `${cssW}px`;
+        svg.style.height = `${cssW / aspect}px`;
+
         if (this.reference) {
             const legend = document.createElement("div");
             legend.className = "chart-legend";
