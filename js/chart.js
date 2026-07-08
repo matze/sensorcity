@@ -7,9 +7,7 @@ import { COMFORT_MARKS } from "./scale.js";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const VIEW_W = 720;
 const VIEW_H = 300;
-// The right gutter holds the comfort labels ("behaglich", "warm", …); wide
-// enough that the labels still fit at the enlarged mobile font size.
-const MARGIN = { top: 16, right: 96, bottom: 28, left: 40 };
+const MARGIN = { top: 16, right: 20, bottom: 28, left: 40 };
 const PLOT_W = VIEW_W - MARGIN.left - MARGIN.right;
 const PLOT_H = VIEW_H - MARGIN.top - MARGIN.bottom;
 
@@ -96,15 +94,15 @@ export class Chart {
         this.drawYAxis(svg, vMin, vMax);
         this.drawXAxis(svg, spanDays);
 
-        if (comfortMarks) {
-            this.drawComfortMarks(svg);
-        }
-
         if (this.reference) {
             this.drawReference(svg, this.reference);
         }
 
         this.drawLine(svg, points);
+
+        if (comfortMarks) {
+            this.drawComfortMarks(svg);
+        }
 
         this.vCrosshair = el("line", { class: "chart-crosshair", y1: MARGIN.top, y2: MARGIN.top + PLOT_H, opacity: 0 });
         this.hCrosshair = el("line", { class: "chart-crosshair", x1: MARGIN.left, x2: MARGIN.left + PLOT_W, opacity: 0 });
@@ -172,8 +170,6 @@ export class Chart {
         }
     }
 
-    // Comfort reference labels in the right gutter, at their absolute
-    // temperature, for those that fall within the visible range.
     drawComfortMarks(svg) {
         const edge = MARGIN.left + PLOT_W;
 
@@ -184,9 +180,8 @@ export class Chart {
 
             const y = this.y(temp);
             svg.append(el("line", { class: "comfort-line", x1: MARGIN.left, x2: edge, y1: y, y2: y }));
-            svg.append(el("line", { class: "comfort-tick", x1: edge, x2: edge + 5, y1: y, y2: y }));
 
-            const node = el("text", { class: "comfort-label", x: edge + 10, y: y + 3 });
+            const node = el("text", { class: "comfort-label", x: edge - 6, y: y + 3, "text-anchor": "end" });
             node.textContent = label;
             svg.append(node);
         }

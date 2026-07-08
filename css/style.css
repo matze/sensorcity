@@ -584,13 +584,11 @@ a:hover {
     fill: var(--text-muted);
     font-size: 10px;
     letter-spacing: 0.02em;
-}
-
-.chart .comfort-tick {
-    stroke: var(--text-muted);
-    stroke-width: 1;
-    shape-rendering: crispEdges;
-    vector-effect: non-scaling-stroke;
+    paint-order: stroke fill;
+    stroke: var(--surface);
+    stroke-width: 3px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .chart .comfort-line {
