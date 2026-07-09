@@ -436,7 +436,7 @@ async function refresh({ initial = false } = {}) {
                 const sensor = state.byKey.get(wanted);
                 renderDetail(sensor);
                 updateListSelection();
-                sensorMap.highlight(wanted);
+                renderLegend();
             }
         }
     } catch (error) {
