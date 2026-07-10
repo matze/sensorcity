@@ -72,6 +72,20 @@ function minutesAgo(sensor) {
     return Math.round((Date.now() - sensor.measuredAt) / 60000);
 }
 
+function resolveKey(raw) {
+    if (!raw) {
+        return null;
+    }
+
+    if (state.byKey.has(raw)) {
+        return raw;
+    }
+
+    const sensor = state.sensors.find((s) => s.key === raw);
+
+    return sensor ? sensor.deviceId : null;
+}
+
 // ---------- Sensor list ----------
 
 function renderList(filter = "") {
@@ -90,9 +104,9 @@ function renderList(filter = "") {
     for (const sensor of matches) {
         const item = document.createElement("li");
         item.className = "sensor-item";
-        item.dataset.key = sensor.key;
+        item.dataset.key = sensor.deviceId;
 
-        if (sensor.key === state.selectedKey) {
+        if (sensor.deviceId === state.selectedKey) {
             item.classList.add("active");
         }
 
@@ -103,10 +117,10 @@ function renderList(filter = "") {
         const color = networkScale.color(sensor.temp);
         item.innerHTML = `
             <span class="sensor-swatch" style="background:${color}"></span>
-            <span class="sensor-name" title="${sensor.name}">${sensor.key}</span>
+            <span class="sensor-name" title="${sensor.name}">${sensor.name}</span>
             <span class="sensor-temp">${sensor.temp.toFixed(1)}°</span>`;
 
-        item.addEventListener("click", () => select(sensor.key, { fromList: true }));
+        item.addEventListener("click", () => select(sensor.deviceId, { fromList: true }));
         dom.list.append(item);
     }
 }
@@ -223,11 +237,10 @@ async function select(key, { fromUrl = false } = {}) {
 
     state.selectedKey = key;
     state.trend = null;
+    document.title = `Karlsruhe SensorCity · ${sensor.name}`;
 
     if (!fromUrl) {
         writeSelectedToUrl(key);
-    } else {
-        document.title = `Karlsruhe SensorCity · ${key}`;
     }
 
     renderDetail(sensor);
@@ -250,7 +263,7 @@ async function loadHistory(sensor) {
             loadReference(field, state.rangeDays),
         ]);
 
-        if (state.selectedKey !== sensor.key || state.metric !== metricKeyFor(field)) {
+        if (state.selectedKey !== sensor.deviceId || state.metric !== metricKeyFor(field)) {
             return; // selection or metric changed while loading
         }
 
@@ -293,7 +306,7 @@ async function loadTrend(sensor) {
     try {
         const points = await fetchHistory({ deviceId: sensor.deviceId, days: 2, field: "temp" });
 
-        if (state.selectedKey !== sensor.key || points.length === 0) {
+        if (state.selectedKey !== sensor.deviceId || points.length === 0) {
             return;
         }
 
@@ -341,7 +354,7 @@ async function loadSensors() {
     const sensors = await fetchSensors();
 
     state.sensors = sensors;
-    state.byKey = new Map(sensors.map((sensor) => [sensor.key, sensor]));
+    state.byKey = new Map(sensors.map((sensor) => [sensor.deviceId, sensor]));
 
     networkScale = makeScale(state.scaleMode, sensors.map((sensor) => sensor.temp));
 
@@ -426,8 +439,16 @@ async function refresh({ initial = false } = {}) {
     try {
         await loadSensors();
 
-        const fallback = state.byKey.has(DEFAULT_STATION) ? DEFAULT_STATION : state.sensors[0]?.key;
-        const wanted = initial ? (selectedKeyFromUrl() || fallback) : state.selectedKey;
+        const fallback = resolveKey(DEFAULT_STATION) || state.sensors[0]?.deviceId;
+        let wanted;
+
+        if (initial) {
+            const fromUrl = selectedKeyFromUrl();
+            wanted = fromUrl ? resolveKey(fromUrl) : null;
+            if (!wanted) wanted = fallback;
+        } else {
+            wanted = state.selectedKey;
+        }
 
         if (wanted && state.byKey.has(wanted)) {
             if (initial) {
@@ -554,7 +575,10 @@ function init() {
         }
     });
 
-    onUrlChange((key) => key && select(key, { fromUrl: true }));
+    onUrlChange((raw) => {
+        const key = raw && resolveKey(raw);
+        if (key) select(key, { fromUrl: true });
+    });
 
     window.addEventListener("focus", () => {
         if (Date.now() - (state.lastRefresh || 0) > REFRESH_MS) {

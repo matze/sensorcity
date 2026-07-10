@@ -23,7 +23,6 @@ export function writeSelectedToUrl(key) {
     url.searchParams.set(PARAM, key);
     url.hash = "";
     history.replaceState({}, "", url);
-    document.title = `${TITLE} · ${key}`;
 }
 
 // Notify when the user navigates history (back/forward) to another sensor.

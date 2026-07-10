@@ -40,13 +40,13 @@ export class SensorMap {
 
         located.forEach((sensor) => {
             const marker = L.marker([sensor.lat, sensor.lon], {
-                icon: this.icon(sensor, sensor.key === this.selectedKey),
+                icon: this.icon(sensor, sensor.deviceId === this.selectedKey),
                 title: sensor.name,
             });
 
-            marker.on("click", () => this.onSelect(sensor.key));
+            marker.on("click", () => this.onSelect(sensor.deviceId));
             marker.addTo(this.map);
-            this.markers.set(sensor.key, { marker, sensor });
+            this.markers.set(sensor.deviceId, { marker, sensor });
         });
 
         if (located.length && !this.fitted) {
