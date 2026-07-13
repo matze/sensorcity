@@ -458,6 +458,7 @@ async function refresh({ initial = false } = {}) {
                 renderDetail(sensor);
                 updateListSelection();
                 renderLegend();
+                await Promise.all([loadHistory(sensor), loadTrend(sensor)]);
             }
         }
     } catch (error) {
