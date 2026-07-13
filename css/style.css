@@ -59,7 +59,7 @@ a {
     text-decoration: none;
 }
 
-a:hover {
+a:hover:not(.leaflet-bar a) {
     text-decoration: underline;
 }
 
