@@ -242,7 +242,8 @@ async function loadHistory(sensor) {
     state.historyPoints = null;
     state.reference = null;
 
-    const { field } = METRICS[state.metric];
+    const metric = state.metric;
+    const { field } = METRICS[metric];
 
     try {
         const [points, reference] = await Promise.all([
@@ -250,7 +251,7 @@ async function loadHistory(sensor) {
             loadReference(field, state.rangeDays),
         ]);
 
-        if (state.selectedKey !== sensor.deviceId || state.metric !== metricKeyFor(field)) {
+        if (state.selectedKey !== sensor.deviceId || state.metric !== metric) {
             return; // selection or metric changed while loading
         }
 
@@ -278,10 +279,6 @@ async function loadReference(field, days) {
     } catch {
         return null;
     }
-}
-
-function metricKeyFor(field) {
-    return Object.keys(METRICS).find((key) => METRICS[key].field === field);
 }
 
 // The temperature change against the reading from the same time the day before,
@@ -362,13 +359,14 @@ async function loadNetworkHistory() {
     state.historyPoints = null;
     state.reference = null;
 
-    const { field } = METRICS[state.metric];
+    const metric = state.metric;
+    const { field } = METRICS[metric];
 
     try {
         const points = await loadReference(field, state.rangeDays);
 
         if (state.selectedKey) return;
-        if (state.metric !== metricKeyFor(field)) return;
+        if (state.metric !== metric) return;
 
         state.historyPoints = points;
         state.reference = null;
