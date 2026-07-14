@@ -25,16 +25,14 @@ const SORTS = {
     cold: (a, b) => a.temp - b.temp,
 };
 
-const dom = {
-    list: document.getElementById("sensorList"),
-    search: document.getElementById("sensorSearch"),
-    sortControls: document.getElementById("sortControls"),
-    detail: document.getElementById("detail"),
-    heatControl: document.getElementById("heatControl"),
-    rangeControls: document.getElementById("rangeControls"),
-    metricControls: document.getElementById("metricControls"),
-    legend: document.getElementById("scaleLegend"),
-};
+const sensorList = document.getElementById("sensorList");
+const sensorSearch = document.getElementById("sensorSearch");
+const sortControls = document.getElementById("sortControls");
+const detail = document.getElementById("detail");
+const heatControl = document.getElementById("heatControl");
+const rangeControls = document.getElementById("rangeControls");
+const metricControls = document.getElementById("metricControls");
+const scaleLegend = document.getElementById("scaleLegend");
 
 const state = {
     sensors: [],
@@ -83,10 +81,10 @@ function renderList(filter = "") {
         .filter((sensor) => sensor.key.toLowerCase().includes(needle))
         .sort(SORTS[state.sort]);
 
-    dom.list.innerHTML = "";
+    sensorList.innerHTML = "";
 
     if (matches.length === 0) {
-        dom.list.innerHTML = '<li class="list-empty">Keine Treffer.</li>';
+        sensorList.innerHTML = '<li class="list-empty">Keine Treffer.</li>';
         return;
     }
 
@@ -110,21 +108,21 @@ function renderList(filter = "") {
             <span class="sensor-temp">${sensor.temp.toFixed(1)}°</span>`;
 
         item.addEventListener("click", () => select(sensor.deviceId, { fromList: true }));
-        dom.list.append(item);
+        sensorList.append(item);
     }
 }
 
 function updateListSelection() {
-    for (const item of dom.list.querySelectorAll(".sensor-item")) {
+    for (const item of sensorList.querySelectorAll(".sensor-item")) {
         item.classList.toggle("active", item.dataset.key === state.selectedKey);
     }
 
-    const active = dom.list.querySelector(".sensor-item.active");
+    const active = sensorList.querySelector(".sensor-item.active");
 
     if (active) {
         // Scroll only the list container, never the window — otherwise selecting
         // on load drags the viewport down to the list (bottom of the page on mobile).
-        const list = dom.list;
+        const list = sensorList;
         const delta = active.getBoundingClientRect().top - list.getBoundingClientRect().top;
         list.scrollTop += delta - (list.clientHeight - active.clientHeight) / 2;
     }
@@ -136,8 +134,8 @@ function renderDetail(sensor) {
     const stale = isStale(sensor);
     const color = networkScale.color(sensor.temp);
 
-    dom.detail.classList.toggle("stale", stale);
-    dom.detail.innerHTML = `
+    detail.classList.toggle("stale", stale);
+    detail.innerHTML = `
         <div class="detail-head">
             <h2>${sensor.name}</h2>
             <span class="detail-meta">
@@ -338,8 +336,8 @@ function renderChart() {
 }
 
 function renderEmptyDetail() {
-    dom.detail.classList.remove("stale");
-    dom.detail.innerHTML = `
+    detail.classList.remove("stale");
+    detail.innerHTML = `
         <div class="detail-head">
             <h2>Kein Sensor ausgewählt</h2>
         </div>
@@ -390,7 +388,7 @@ async function loadSensors() {
 
     networkScale = makeScale(state.scaleMode, sensors.map((sensor) => sensor.temp));
 
-    renderList(dom.search.value);
+    renderList(sensorSearch.value);
     sensorMap.setSensors(sensors, networkScale);
     heatOverlay.setData(sensors, networkScale);
 
@@ -420,7 +418,7 @@ function renderLegend() {
         ? `<div class="scale-legend-dot" style="left:calc(var(--dot) / 2 + (100% - var(--dot)) * ${(pos / 100).toFixed(4)})"></div>`
         : "";
 
-    dom.legend.innerHTML =
+    scaleLegend.innerHTML =
         `<div class="scale-legend-bar" style="background:${networkScale.gradientCss()}">${marker}</div>`
         + `<div class="scale-legend-ticks">${ticks}</div>`;
 }
@@ -434,7 +432,7 @@ function setHeatMode(mode) {
 
     state.heatMode = mode;
     writeParam("heat", mode === "off" ? null : mode);
-    dom.heatControl.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
+    heatControl.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.mode === mode));
 
     const scaleMode = mode === "relative" ? RELATIVE : COMFORT;
 
@@ -454,7 +452,7 @@ function setHeatMode(mode) {
 // Rebuild the network scale and repaint everything it colors.
 function recolorForScale() {
     networkScale = makeScale(state.scaleMode, state.sensors.map((sensor) => sensor.temp));
-    renderList(dom.search.value);
+    renderList(sensorSearch.value);
 
     const selected = state.byKey.get(state.selectedKey);
 
@@ -498,8 +496,8 @@ async function refresh({ initial = false } = {}) {
         console.error("refresh failed", error);
 
         if (initial) {
-            dom.detail.innerHTML = `<p class="error">Daten konnten nicht geladen werden: ${error.message}</p>`;
-            dom.list.innerHTML = `<li class="list-empty">Fehler beim Laden.</li>`;
+            detail.innerHTML = `<p class="error">Daten konnten nicht geladen werden: ${error.message}</p>`;
+            sensorList.innerHTML = `<li class="list-empty">Fehler beim Laden.</li>`;
         }
     } finally {
         state.lastRefresh = Date.now();
@@ -536,10 +534,10 @@ function restoreViewFromUrl() {
         state.scaleMode = state.heatMode === "relative" ? RELATIVE : COMFORT;
     }
 
-    markActive(dom.rangeControls, "days", state.rangeDays);
-    markActive(dom.metricControls, "metric", state.metric);
-    markActive(dom.sortControls, "sort", state.sort);
-    markActive(dom.heatControl, "mode", state.heatMode);
+    markActive(rangeControls, "days", state.rangeDays);
+    markActive(metricControls, "metric", state.metric);
+    markActive(sortControls, "sort", state.sort);
+    markActive(heatControl, "mode", state.heatMode);
 }
 
 function init() {
@@ -550,9 +548,9 @@ function init() {
     restoreViewFromUrl();
     renderLegend();
 
-    dom.search.addEventListener("input", () => renderList(dom.search.value));
+    sensorSearch.addEventListener("input", () => renderList(sensorSearch.value));
 
-    dom.sortControls.addEventListener("click", (event) => {
+    sortControls.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-sort]");
 
         if (!button) {
@@ -561,11 +559,11 @@ function init() {
 
         state.sort = button.dataset.sort;
         writeParam("sort", state.sort === "name" ? null : state.sort);
-        markActive(dom.sortControls, "sort", state.sort);
-        renderList(dom.search.value);
+        markActive(sortControls, "sort", state.sort);
+        renderList(sensorSearch.value);
     });
 
-    dom.heatControl.addEventListener("click", (event) => {
+    heatControl.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-mode]");
 
         if (button) {
@@ -573,7 +571,7 @@ function init() {
         }
     });
 
-    dom.metricControls.addEventListener("click", (event) => {
+    metricControls.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-metric]");
 
         if (!button || button.dataset.metric === state.metric) {
@@ -582,7 +580,7 @@ function init() {
 
         state.metric = button.dataset.metric;
         writeParam("metric", state.metric === "temp" ? null : state.metric);
-        markActive(dom.metricControls, "metric", state.metric);
+        markActive(metricControls, "metric", state.metric);
 
         const sensor = state.byKey.get(state.selectedKey);
 
@@ -593,7 +591,7 @@ function init() {
         }
     });
 
-    dom.rangeControls.addEventListener("click", (event) => {
+    rangeControls.addEventListener("click", (event) => {
         const button = event.target.closest("button[data-days]");
 
         if (!button) {
@@ -602,7 +600,7 @@ function init() {
 
         state.rangeDays = Number(button.dataset.days);
         writeParam("days", state.rangeDays === 7 ? null : state.rangeDays);
-        markActive(dom.rangeControls, "days", state.rangeDays);
+        markActive(rangeControls, "days", state.rangeDays);
 
         const sensor = state.byKey.get(state.selectedKey);
 
