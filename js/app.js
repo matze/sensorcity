@@ -9,7 +9,6 @@ import { HeatOverlay } from "./heatmap.js";
 import { Chart } from "./chart.js";
 
 const REFRESH_MS = 5 * 60 * 1000;
-const DEFAULT_STATION = "Ettlinger Strasse - Kreuzung Kriegsstrasse";
 
 // The chartable measures. `field` maps to api.js; `comfort` marks temperature as
 // the only one carrying the comfort color scale and reference lines.
@@ -216,7 +215,7 @@ function apparentTemp(temp, humidity) {
 
 function metric(label, value, unit, digits = 1) {
     const shown = value == null
-        ? "—"
+        ? "–"
         : new Intl.NumberFormat("de-DE", { maximumFractionDigits: digits }).format(value);
 
     return `
@@ -348,6 +347,49 @@ function renderChart() {
     });
 }
 
+function renderEmptyDetail() {
+    dom.detail.classList.remove("stale");
+    dom.detail.innerHTML = `
+        <div class="detail-head">
+            <h2>Kein Sensor ausgewählt</h2>
+        </div>
+        <div class="detail-body">
+            <div class="hero-block">
+                <div class="hero">
+                    <span class="hero-dot" style="background:var(--muted)"></span>
+                    <span class="hero-value">–</span>
+                    <span class="hero-unit">°C</span>
+                </div>
+            </div>
+            <div class="metric-grid">
+                ${metric("Luftfeuchtigkeit", null, "%")}
+                ${metric("Luftdruck", null, "hPa", 0)}
+                ${metric("Sonneneinstrahlung", null, "W/m²", 0)}
+            </div>
+        </div>`;
+}
+
+async function loadNetworkHistory() {
+    chart.showLoading();
+    state.historyPoints = null;
+    state.reference = null;
+
+    const { field } = METRICS[state.metric];
+
+    try {
+        const points = await loadReference(field, state.rangeDays);
+
+        if (state.selectedKey) return;
+        if (state.metric !== metricKeyFor(field)) return;
+
+        state.historyPoints = points;
+        state.reference = null;
+        renderChart();
+    } catch (error) {
+        chart.showMessage(`Netzwerk-Mittelwert nicht verfügbar (${error.message}).`);
+    }
+}
+
 // ---------- Data loading ----------
 
 async function loadSensors() {
@@ -439,13 +481,11 @@ async function refresh({ initial = false } = {}) {
     try {
         await loadSensors();
 
-        const fallback = resolveKey(DEFAULT_STATION) || state.sensors[0]?.deviceId;
         let wanted;
 
         if (initial) {
             const fromUrl = selectedKeyFromUrl();
             wanted = fromUrl ? resolveKey(fromUrl) : null;
-            if (!wanted) wanted = fallback;
         } else {
             wanted = state.selectedKey;
         }
@@ -460,6 +500,9 @@ async function refresh({ initial = false } = {}) {
                 renderLegend();
                 await Promise.all([loadHistory(sensor), loadTrend(sensor)]);
             }
+        } else if (initial) {
+            renderEmptyDetail();
+            loadNetworkHistory();
         }
     } catch (error) {
         console.error("refresh failed", error);
@@ -555,6 +598,8 @@ function init() {
 
         if (sensor) {
             loadHistory(sensor);
+        } else {
+            loadNetworkHistory();
         }
     });
 
@@ -573,6 +618,8 @@ function init() {
 
         if (sensor) {
             loadHistory(sensor);
+        } else {
+            loadNetworkHistory();
         }
     });
 

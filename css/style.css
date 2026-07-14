@@ -283,7 +283,8 @@ a:hover:not(.leaflet-bar a) {
 .detail-placeholder {
     display: flex;
     justify-content: center;
-    padding: 2rem 0;
+    align-items: center;
+    min-height: 7.5rem;
 }
 
 .detail-head {
