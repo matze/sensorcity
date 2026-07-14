@@ -72,17 +72,7 @@ function minutesAgo(sensor) {
 }
 
 function resolveKey(raw) {
-    if (!raw) {
-        return null;
-    }
-
-    if (state.byKey.has(raw)) {
-        return raw;
-    }
-
-    const sensor = state.sensors.find((s) => s.key === raw);
-
-    return sensor ? sensor.deviceId : null;
+    return raw && state.byKey.has(raw) ? raw : null;
 }
 
 // ---------- Sensor list ----------
