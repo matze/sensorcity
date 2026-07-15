@@ -8,11 +8,11 @@ const HISTORY_URL = `${SERVICE}/2/query`;
 export const STALE_AFTER_MS = 60 * 60 * 1000;
 
 // The FeatureServer mixes sensor kinds (see `beschreibung`): air-temperature
-// weather stations, `TSK-Container` waste-bin sensors, soil, rain and water-level
-// probes. Only the weather stations measure ambient air; the container sensors
-// report the temperature inside a metal bin and read wildly hot, so we keep the
-// weather stations alone for the list, map and heat map.
-const AIR_TEMPERATURE = "Temperatur";
+// weather stations, soil, rain and water-level probes. Only the weather stations
+// measure ambient air, so we keep them alone for the list, map and heat map.
+// The label was renamed from `Temperatur` to `Temperatur-Sensor`; the archive
+// still holds both, so match on the shared prefix to span the transition.
+const AIR_TEMPERATURE_PREFIX = "Temperatur";
 
 async function fetchJson(url, params) {
     // `no-store` skips conditional revalidation, which otherwise makes a manual
@@ -60,7 +60,7 @@ export async function fetchSensors() {
 
     return data.features
         .map(toSensor)
-        .filter((sensor) => sensor.key && sensor.temp != null && sensor.kind === AIR_TEMPERATURE)
+        .filter((sensor) => sensor.key && sensor.temp != null && sensor.kind?.startsWith(AIR_TEMPERATURE_PREFIX))
         .sort((a, b) => a.key.localeCompare(b.key, "de"));
 }
 
@@ -92,7 +92,7 @@ export async function fetchHistory({ deviceId = null, days, field = "temp" }) {
     const extract = (unit) =>
         `EXTRACT(${unit} FROM measured_at  +INTERVAL '1:59:59' HOUR TO SECOND)`;
 
-    const scope = deviceId ? `device_id='${deviceId}'` : `beschreibung='${AIR_TEMPERATURE}'`;
+    const scope = deviceId ? `device_id='${deviceId}'` : `beschreibung LIKE '${AIR_TEMPERATURE_PREFIX}%'`;
 
     const data = await fetchJson(HISTORY_URL, {
         f: "json",
