@@ -2,6 +2,7 @@
 // temperature scale; clicking one selects it. Uses the global `L` from the
 // vendored Leaflet script.
 
+import { formatFixed } from "./format.js";
 import { makeScale, COMFORT } from "./scale.js";
 
 const KARLSRUHE = [49.0069, 8.4037];
@@ -85,7 +86,7 @@ export class SensorMap {
             const zoom = Math.max(this.map.getZoom(), FOCUS_ZOOM);
             this.map.flyTo(active.marker.getLatLng(), zoom, { duration: 0.6 });
             active.marker.bindPopup(
-                `<strong>${active.sensor.name}</strong><br>${active.sensor.temp.toFixed(1)} °C`,
+                `<strong>${active.sensor.name}</strong><br>${formatFixed(active.sensor.temp, 1)} °C`,
                 { maxWidth: 220 }
             ).openPopup();
         }

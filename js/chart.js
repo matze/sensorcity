@@ -2,6 +2,7 @@
 // crosshair and tooltip and an optional city-wide reference curve. No chart
 // library.
 
+import { formatFixed } from "./format.js";
 import { COMFORT_MARKS } from "./scale.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -150,7 +151,7 @@ export class Chart {
             const y = this.y(v);
             svg.append(el("line", { class: "grid-line", x1: MARGIN.left, x2: MARGIN.left + PLOT_W, y1: y, y2: y }));
             const label = el("text", { class: "axis-label", x: MARGIN.left - 8, y: y + 3, "text-anchor": "end" });
-            label.textContent = `${v}${this.axisUnit}`;
+            label.textContent = `${formatFixed(v, Number.isInteger(v) ? 0 : 1)}${this.axisUnit}`;
             svg.append(label);
         }
     }
@@ -220,7 +221,7 @@ export class Chart {
     }
 
     bindHover() {
-        const fmt = (value) => value.toFixed(this.digits);
+        const fmt = (value) => formatFixed(value, this.digits);
 
         const move = (event) => {
             const rect = this.svg.getBoundingClientRect();

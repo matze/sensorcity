@@ -2,6 +2,7 @@
 // history chart, and keeps the selection in sync with the URL.
 
 import { fetchSensors, fetchHistory, STALE_AFTER_MS } from "./api.js";
+import { formatFixed } from "./format.js";
 import { makeScale, COMFORT, RELATIVE } from "./scale.js";
 import { selectedKeyFromUrl, writeSelectedToUrl, onUrlChange, readParam, writeParam } from "./state.js";
 import { SensorMap } from "./map.js";
@@ -105,7 +106,7 @@ function renderList(filter = "") {
         item.innerHTML = `
             <span class="sensor-swatch" style="background:${color}"></span>
             <span class="sensor-name" title="${sensor.name}">${sensor.name}</span>
-            <span class="sensor-temp">${sensor.temp.toFixed(1)}°</span>`;
+            <span class="sensor-temp">${formatFixed(sensor.temp, 1)}°</span>`;
 
         item.addEventListener("click", () => select(sensor.deviceId, { fromList: true }));
         sensorList.append(item);
@@ -146,7 +147,7 @@ function renderDetail(sensor) {
             <div class="hero-block">
                 <div class="hero">
                     <span class="hero-dot" style="background:${color}"></span>
-                    <span class="hero-value">${sensor.temp.toFixed(1)}</span>
+                    <span class="hero-value">${formatFixed(sensor.temp, 1)}</span>
                     <span class="hero-unit">°C</span>
                     ${trendBadge(state.trend)}
                 </div>
@@ -170,7 +171,7 @@ function trendBadge(trend) {
     const rising = trend > 0;
 
     return `<span class="hero-trend ${rising ? "up" : "down"}" title="gegenüber gestern">`
-        + `${rising ? "▲" : "▼"} ${Math.abs(trend).toFixed(1)}°</span>`;
+        + `${rising ? "▲" : "▼"} ${formatFixed(Math.abs(trend), 1)}°</span>`;
 }
 
 // Only the apparent temperature, and only when heat and humidity pull it away
@@ -182,7 +183,7 @@ function heroCaption(sensor) {
         return "";
     }
 
-    return `<div class="hero-caption">gefühlt ${feels.toFixed(0)} °C</div>`;
+    return `<div class="hero-caption">gefühlt ${formatFixed(feels, 0)} °C</div>`;
 }
 
 // Heat-index apparent temperature (Rothfusz), valid in warm, humid air; null
@@ -204,7 +205,7 @@ function apparentTemp(temp, humidity) {
 function metric(label, value, unit, digits = 1) {
     const shown = value == null
         ? "–"
-        : new Intl.NumberFormat("de-DE", { maximumFractionDigits: digits }).format(value);
+        : formatFixed(value, digits);
 
     return `
         <div class="metric">
