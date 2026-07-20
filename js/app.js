@@ -389,7 +389,7 @@ async function loadSensors() {
 
     renderList(sensorSearch.value);
     sensorMap.setSensors(sensors, networkScale);
-    heatOverlay.setData(sensors, networkScale);
+    heatOverlay.setData(sensors.filter((sensor) => !isStale(sensor)), networkScale);
 
     if (state.heatMode === "off") {
         heatOverlay.disable();
